@@ -189,5 +189,5 @@ def run_code(file_name: str = "to_compile"):
             if understand_line(line, count_of_lines):
                 return 1
 
-
-run_code()
+file_name = input("Enter file name: ")
+run_code(file_name)
