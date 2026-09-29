@@ -1,0 +1,7 @@
+include math
+
+x = pow(10, 2)
+while x > 0
+out x
+x //= 2
+whileend
