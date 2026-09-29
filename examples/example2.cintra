@@ -1,0 +1,16 @@
+
+x = 2
+
+guess = 0
+in guess
+count_of_tries = 0
+while guess != x
+count_of_tries += 1
+out "haha! Try again looser!"
+in guess
+whileend 
+if count_of_tries == 1
+out "MEGA WIN"
+else
+out "YOU WON!"
+endif
