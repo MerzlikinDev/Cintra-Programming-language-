@@ -1,0 +1,3 @@
+int x = 0
+in x
+out x % 2
