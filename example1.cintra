@@ -1,7 +1,0 @@
-x = 0
-in x
-if x % 2 == 0
-out "even"
-else
-out odd
-endif
