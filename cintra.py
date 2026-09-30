@@ -6,8 +6,8 @@ taken = 0
 
 def understand_line(line, count_of_lines):
     global stack, taken, skip
-    if line[0] == "if":
-        cond = " ".join(line[1:]).rstrip(":")
+    if line[0] == "if" or line[0] == "если":
+        cond = " ".join(line[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
         try:
             result = eval(cond, {}, stack)
         except Exception as e:
@@ -18,18 +18,18 @@ def understand_line(line, count_of_lines):
         else:
             skip = 1
         return 0
-    if line[0] == "else":
+    if line[0] == "else" or line[0] == "иначе":
         if taken == 1:
             skip = 1
         return 0
-    if line[0] == "endif":
+    if line[0] == "endif" or line[0] == "конецесли":
         taken = 0
         return 0
 
-    if line[0] == "out":
+    if line[0] == "out" or line[0] == "вывести":
         print(eval(" ".join(line[1:]), {}, stack))
         return 0
-    if line[0] == "in":
+    if line[0] in ("in", "ввести"):
         var = line[1]
         try:
             if var in stack:
@@ -41,10 +41,10 @@ def understand_line(line, count_of_lines):
             print(f"BAD INPUT on line {count_of_lines}: {e}")
             return 1
         return 0
-    if line[0] == "include":
+    if line[0] == "include" or line[0] == "вывести":
         importlib.import_module(line[1])
         return 0
-    if line[0] == "out_type":
+    if line[0] == "out_type" or line[0] == "вывести_тип":
         print(type(eval(" ".join(line[1:]), {}, stack)))
         return 0
     if " ".join(line).startswith("//"):
@@ -82,28 +82,28 @@ def run_block(body, body_nums):
     while i < len(body):
         l = body[i]
         if skip > 0:
-            if l[0] == "if":
+            if l[0] in ("if", "если"):
                 skip += 1
-            elif l[0] == "endif":
+            elif l[0] in ("endif", "конецесли"):
                 skip -= 1
                 if skip == 0:
                     taken = 0
-            elif l[0] == "while":
+            elif l[0] in ("while", "пока"):
                 skip += 1
-            elif l[0] == "whileend":
+            elif l[0] in ("whileend", "покаконец"):
                 skip -= 1
-            elif l[0] == "else" and skip == 1:
+            elif l[0] in ("else", "иначе") and skip == 1:
                 skip = 0
             i += 1
             continue
-        if l[0] == "while":
-            cond = " ".join(l[1:]).rstrip(":")
+        if l[0] in ("while", "пока"):
+            cond = " ".join(l[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
             depth = 0
             j = i + 1
             while j < len(body):
-                if body[j][0] == "while":
+                if body[j][0] in ("while", "пока"):
                     depth += 1
-                elif body[j][0] == "whileend":
+                elif body[j][0] in ("whileend", "покаконец"):
                     if depth == 0:
                         break
                     depth -= 1
@@ -118,7 +118,7 @@ def run_block(body, body_nums):
                     return 1
             i = j + 1
             continue
-        if l[0] == "whileend":
+        if l[0] in ("whileend", "покаконец"):
             print("UNEXPECTED whileend")
             return 1
         if understand_line(l, body_nums[i]):
@@ -144,22 +144,22 @@ def run_code(file_name: str = "to_compile"):
                 continue
 
             if skip > 0:
-                if line[0] == "if":
+                if line[0] in ("if", "если"):
                     skip += 1
-                elif line[0] == "endif":
+                elif line[0] in ("endif", "конецесли"):
                     skip -= 1
                     if skip == 0:
                         taken = 0
-                elif line[0] == "while":
+                elif line[0] in ("while", "покаконец"):
                     skip += 1
-                elif line[0] == "whileend":
+                elif line[0] in ("whileend", "покаконец"):
                     skip -= 1
-                elif line[0] == "else" and skip == 1:
+                elif line[0] in ("else", "иначе") and skip == 1:
                     skip = 0
                 continue
 
-            if line[0] == "while":
-                cond = " ".join(line[1:]).rstrip(":")
+            if line[0] in ("while", "покаконец"):
+                cond = " ".join(line[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
                 body = []
                 body_nums = []
                 depth = 0
@@ -172,9 +172,9 @@ def run_code(file_name: str = "to_compile"):
                     l2 = raw2.split()
                     if not l2:
                         continue
-                    if l2[0] == "while":
+                    if l2[0] in ("while", "покаконец"):
                         depth += 1
-                    elif l2[0] == "whileend":
+                    elif l2[0] in ("whileend", "покаконец"):
                         if depth == 0:
                             break
                         depth -= 1
