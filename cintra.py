@@ -67,6 +67,9 @@ def understand_line(line, count_of_lines):
             args = [eval(a, {}, stack) for a in line[2:]]
             stack[line[1]](*args)
         return 0
+    if line[0] in ("var", "переменная"):
+        stack[line[1]] = eval(" ".join(line[3:]), {}, stack)
+        return 0
     try:
         name, op_tok = line[0], line[1]
         expr = " ".join(line[2:])
