@@ -1,0 +1,107 @@
+O2 Style Guide for Cintra GPL Python Interpreter: Functions
+===========================================================
+
+    General Principles
+
+    Use English keywords only: lambda and call.
+
+    Do not mix English and Russian keywords.
+
+    A function body is a single Python expression.
+
+    Functions are for side effects, not for returning values.
+
+    Functions are in beta. Use them only when necessary.
+
+    Definition Syntax
+
+    lambda name arg1 arg2 : expression
+
+    No parentheses around the argument list.
+
+    Arguments are separated by spaces.
+
+    A colon separates the signature from the body.
+
+    The body is written after the colon.
+
+    Example:
+    // Greeting function
+    lambda greet name : print("Hello, " + name)
+
+    Calling
+
+    call name arg1 arg2
+
+    No parentheses.
+
+    String arguments must be quoted.
+
+    For zero arguments: call name
+
+    Example:
+    call greet "Alice"
+
+    Naming
+
+    Function names: snake_case, verb + noun.
+    Examples: greet_user, print_sum.
+
+    Parameter names: snake_case.
+    Examples: user_name, total_count.
+
+    Do not use names that match interpreter keywords.
+
+    Return Values
+
+    call with arguments ignores the return value.
+
+    call with no arguments executes the function and then executes
+    the result. Therefore a zero-argument function must return None.
+
+    To output inside a function, use print, not out.
+
+    Limitations
+
+    Only one expression in the body.
+
+    You cannot use interpreter commands like if, else, or while
+    inside the body.
+
+    You can use Python conditional expressions:
+    a if condition else b.
+
+    Example of Good Style
+
+    // Program with functions
+    include math
+
+    lambda greet name : print("Hello, " + name)
+    lambda print_sum a b : print(a + b)
+
+    name = ""
+
+    out "Enter your name:"
+    in name
+
+    call greet name
+    call print_sum 2 3
+
+    Example of Bad Style
+
+    lambda greet(name): print("Hello, " + name)
+    // parentheses are not supported
+
+    call greet("Alice")
+    // parentheses are not supported
+
+    lambda add a b : a + b
+    // no output, call ignores the result
+
+    File Organization
+
+    1. Comment describing the program.
+    2. include statements.
+    3. Function definitions (lambda).
+    4. Variable initialization.
+    5. Main logic and call statements.
