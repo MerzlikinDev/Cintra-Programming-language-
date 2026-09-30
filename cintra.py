@@ -171,20 +171,20 @@ def run_code(file_name: str = "to_compile"):
                     skip -= 1
                     if skip == 0:
                         taken = 0
-                elif line[0] in ("while", "покаконец"):
+                elif line[0] in ("while", "пока"):
                     skip += 1
                 elif line[0] in ("whileend", "покаконец"):
                     skip -= 1
                 elif line[0] in ("else", "иначе") and skip == 1:
                     skip = 0
                 continue
-            if line[0] == "lambda":
+            if line[0] in ("lambda", "лямбда"):
                 understand_line(line, count_of_lines)
                 continue
-            if line[0] == "call":
+            if line[0] in ("call", "вызвать"):
                 understand_line(line, count_of_lines)
                 continue
-            if line[0] in ("while", "покаконец"):
+            if line[0] in ("while", "пока"):
                 cond = " ".join(line[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
                 body = []
                 body_nums = []
@@ -198,7 +198,7 @@ def run_code(file_name: str = "to_compile"):
                     l2 = raw2.split()
                     if not l2:
                         continue
-                    if l2[0] in ("while", "покаконец"):
+                    if l2[0] in ("while", "конец"):
                         depth += 1
                     elif l2[0] in ("whileend", "покаконец"):
                         if depth == 0:
