@@ -49,6 +49,24 @@ def understand_line(line, count_of_lines):
         return 0
     if " ".join(line).startswith("//"):
         return 0
+    # lambda functions are in beta now
+    if line[0] in ("lambda", "лямбда"):
+        all_string = " ".join(line[1:])
+        first = all_string.split(":")[0].split()
+        expression = all_string.split(":")[1]
+        if len(first) >= 2:
+            exec("def" + " " + first[0] + "("+(" ,".join(first[1:]))+")" + ":" + expression, stack)
+        else:
+            exec("def" + " " + first[0] + "()" + ":" + expression, stack)
+        return 0
+    if line[0] in ("call", "вызвать"):
+        full_line = line[1:]
+        if len(full_line) == 1:
+            exec(f'{stack[line[1]]()}', stack)
+        else:
+            args = [eval(a, {}, stack) for a in line[2:]]
+            stack[line[1]](*args)
+        return 0
     try:
         name, op_tok = line[0], line[1]
         expr = " ".join(line[2:])
@@ -157,7 +175,12 @@ def run_code(file_name: str = "to_compile"):
                 elif line[0] in ("else", "иначе") and skip == 1:
                     skip = 0
                 continue
-
+            if line[0] == "lambda":
+                understand_line(line, count_of_lines)
+                continue
+            if line[0] == "call":
+                understand_line(line, count_of_lines)
+                continue
             if line[0] in ("while", "покаконец"):
                 cond = " ".join(line[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
                 body = []
