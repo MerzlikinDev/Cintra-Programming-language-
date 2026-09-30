@@ -1,20 +1,43 @@
 # Cintra GPL — Python Interpreter
 
 Cintra GPL is a simple general-purpose interpreted language implemented in Python.  
-The interpreter reads a program file line by line, stores variables in a global dictionary, evaluates expressions using Python `eval`, and supports conditions, loops, input/output, comments, and Python module imports.
+The interpreter reads a program file line by line, stores variables in a global dictionary, evaluates expressions using Python `eval`, and supports conditions, loops, functions, input/output, comments, and Python module imports.
 
 ## Features
 
 - Dynamically typed variables.
 - Assignment and compound operators: `=`, `+=`, `-=`, `*=`, `/=`, `%=`, `**=`, `//=`.
+- Optional variable declaration with `var` / `переменная`.
 - Conditionals: `if`, `else`, `endif`.
 - Loops: `while`, `whileend`.
+- Functions (beta): define with `lambda` / `лямбда`, call with `call` / `вызвать`.
 - Input/output: `in`, `out`, `out_type`.
 - Comments: lines starting with `//`.
 - Import Python modules via `include`.
 - Expressions use Python-like syntax.
-- Indentation does not affect execution.
+- Logical operators: `&&` and `||` are automatically translated to `and` / `or`. You can also use `and` / `or` directly.
+- Indentation does not affect execution. Blocks are delimited by keywords, not whitespace.
 - Nested `while` and `if` are supported.
+- English and Russian keyword sets are available; do not mix them in one file.
+
+## Keywords
+
+| Purpose         | English    | Russian       |
+|-----------------|------------|---------------|
+| Condition       | `if`       | `если`        |
+| Else branch     | `else`     | `иначе`       |
+| End condition   | `endif`    | `конецесли`   |
+| Loop            | `while`    | `пока`        |
+| End loop        | `whileend` | `покаконец`   |
+| Output          | `out`      | `вывести`     |
+| Output type     | `out_type` | `вывести_тип` |
+| Input           | `in`       | `ввести`      |
+| Import module   | `include`  | `include`     |
+| Declare var     | `var`      | `переменная`  |
+| Define function | `lambda`   | `лямбда`      |
+| Call function   | `call`     | `вызвать`     |
+
+Note: for imports use `include` only. The Russian `вывести` conflicts with the output command and must not be used for imports.
 
 ## Requirements
 
@@ -24,7 +47,7 @@ The interpreter reads a program file line by line, stores variables in a global 
 ## Running
 
 1. Save the interpreter as, for example, `cintra.py`.
-2. Create a file named `to_compile` with Cintra GPL code.
+2. Create a file with Cintra GPL code.
 3. Run:
 
 ```bash
