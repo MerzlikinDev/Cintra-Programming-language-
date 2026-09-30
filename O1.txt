@@ -145,15 +145,3 @@ out "Hello, " + name + "! You are an adult."
 else:
 out "Hello, " + name + "! You are a minor."
 endif
-
-    What to Avoid
-
-    Mixing languages for keywords.
-
-    Inline comments.
-
-    Missing spaces around operators.
-
-    Forgetting endif and whileend.
-
-    Using eval on untrusted data — it is not safe.
