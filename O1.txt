@@ -1,0 +1,159 @@
+O1 Style Guide for Cintra GPL Python Interpreter
+================================================
+
+    General Principles
+
+    Readability is more important than brevity.
+
+    One file = one program.
+
+    File encoding: UTF-8.
+
+    Indentation: 4 spaces. Tabs are forbidden.
+
+    Maximum line length: 79 characters.
+
+    Blank lines: two between major blocks, one inside a block.
+
+    Comments
+
+    Only whole-line comments are allowed, starting with //.
+
+    Inline comments are not supported by the interpreter.
+
+    Put a space after //.
+
+    Comment language should match the language of your keywords.
+
+Correct:
+// This is a comment
+x = 1
+
+Incorrect:
+x = 1 // inline comment will not work
+
+    Keywords
+
+    Choose one language: English or Russian. Do not mix them.
+
+    English: if, else, endif, while, whileend, out, in, include, out_type.
+
+    Russian: если, иначе, конецесли, пока, покаконец, вывести, ввести.
+
+    For import, use only include. The Russian вывести conflicts with the output command.
+
+    Always put a colon after a condition: if x > 0:
+
+    Naming
+
+    Variables: snake_case, e.g. user_name, total_count.
+
+    Constants: UPPER_CASE, e.g. MAX_SIZE.
+
+    Counters: i, j, k.
+
+    Do not use names that match keywords.
+
+    Assignment and Operators
+
+    Spaces around operators are mandatory: x = 1, x += 1.
+
+    The interpreter splits lines by spaces, so x=1 will cause an error.
+
+    Compound operators: *=, +=, -=, /=, %=, **=, //=.
+
+    Expressions
+
+    Spaces around binary operators: a + b, x * y.
+
+    Use parentheses for clarity: (a + b) * c.
+
+    Logical operators: use && and || (the interpreter replaces them with and/or) or use and/or directly. Do not mix.
+
+    Input and Output
+
+    Output: out expression — prints the result of eval.
+
+    Type: out_type expression — prints the type.
+
+    Input: in variable.
+
+    If the variable already exists, input is converted to its type. So initialize the variable with the desired type before in:
+    age = 0
+    in age
+    Otherwise the input will remain a string.
+
+    For string output, use quotes: out "Hello".
+
+    Conditionals
+
+Format:
+if condition:
+...
+else:
+...
+endif
+
+    Do not forget endif.
+
+    Nested conditionals increase indentation by 4 spaces.
+
+    Loops
+
+Format:
+while condition:
+...
+whileend
+
+    Do not forget whileend.
+
+    Nested loops should be indented.
+
+    Import
+
+    All include statements go at the top of the file.
+
+    Example: include math.
+
+    Do not use вывести for import.
+
+    File Organization
+
+    Comment describing the program.
+
+    Imports.
+
+    Variable initialization.
+
+    Main logic.
+
+    Example of Good Style
+
+// Greeting program
+include math
+
+name = ""
+age = 0
+
+out "Enter your name:"
+in name
+out "Enter your age:"
+in age
+
+if age >= 18:
+out "Hello, " + name + "! You are an adult."
+else:
+out "Hello, " + name + "! You are a minor."
+endif
+
+    What to Avoid
+
+    Mixing languages for keywords.
+
+    Inline comments.
+
+    Missing spaces around operators.
+
+    Forgetting endif and whileend.
+
+    Using eval on untrusted data — it is not safe.
