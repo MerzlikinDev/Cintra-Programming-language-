@@ -18,7 +18,7 @@ def understand_line(line, count_of_lines):
         else:
             skip = 1
         return 0
-    if line[0] == "else" or line[0] == "иначе":
+    if line[0].rstrip(":") == "else" or line[0].rstrip(":") == "иначе":
         if taken == 1:
             skip = 1
         return 0
@@ -41,7 +41,7 @@ def understand_line(line, count_of_lines):
             print(f"BAD INPUT on line {count_of_lines}: {e}")
             return 1
         return 0
-    if line[0] == "include" or line[0] == "вывести":
+    if line[0] == "include" or line[0] == "подключить":
         importlib.import_module(line[1])
         return 0
     if line[0] == "out_type" or line[0] == "вывести_тип":
@@ -175,7 +175,7 @@ def run_code(file_name: str = "to_compile"):
                     skip += 1
                 elif line[0] in ("whileend", "покаконец"):
                     skip -= 1
-                elif line[0] in ("else", "иначе") and skip == 1:
+                elif line[0].rstrip(":") in ("else", "иначе") and skip == 1:
                     skip = 0
                 continue
             if line[0] in ("lambda", "лямбда"):
@@ -198,7 +198,7 @@ def run_code(file_name: str = "to_compile"):
                     l2 = raw2.split()
                     if not l2:
                         continue
-                    if l2[0] in ("while", "конец"):
+                    if l2[0] in ("while", "пока"):
                         depth += 1
                     elif l2[0] in ("whileend", "покаконец"):
                         if depth == 0:
