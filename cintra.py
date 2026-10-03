@@ -4,7 +4,17 @@ stack = {}
 skip = 0 
 taken = 0
 
-def understand_line(line: list, count_of_lines):
+def parser_of_expressions(line: str) -> str: # parse line in lambda 
+    line = line.split()
+    if line[0] in ("out", "вывести"):
+        return f'print({" ".join(line[1:])})'
+    if line[0] in ("in", "ввести"):
+        return f'{line[1]} = input()'
+    if line[0] in ("out_type", "вывести_тип"):
+        return f'print({type(line[1])})'
+    if line[0] in ("return", "вернуть"): # do not use it. Unusable thing btw 
+        return f'return {parser_of_expressions(" ".join(line[1:]))}'
+def understand_line(line: list, count_of_lines: int) -> int:
     global stack, taken, skip
     if line[0] == "if" or line[0] == "если":
         cond = " ".join(line[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
@@ -54,6 +64,7 @@ def understand_line(line: list, count_of_lines):
         all_string = " ".join(line[1:])
         first = all_string.split(":")[0].split()
         expression = all_string.split(":")[1]
+        expression = parser_of_expressions(expression)
         if len(first) >= 2:
             exec("def" + " " + first[0] + "("+(" ,".join(first[1:]))+")" + ":" + expression, stack)
         else:
@@ -97,7 +108,7 @@ def understand_line(line: list, count_of_lines):
         return 1
 
 
-def run_block(body, body_nums):
+def run_block(body: list, body_nums: int) -> int:
     global skip, taken
     i = 0
     while i < len(body):
@@ -148,7 +159,7 @@ def run_block(body, body_nums):
     return 0
 
 
-def run_code(file_name: str = "to_compile"):
+def run_code(file_name: str = "to_compile") -> int:
     global stack, taken, skip
     with open(file_name, 'r') as file:
         count_of_lines = 0
