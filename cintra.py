@@ -4,7 +4,7 @@ stack = {}
 skip = 0 
 taken = 0
 
-def understand_line(line, count_of_lines):
+def understand_line(line: list, count_of_lines):
     global stack, taken, skip
     if line[0] == "if" or line[0] == "если":
         cond = " ".join(line[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
