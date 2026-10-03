@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Cintra GPL — A Tiny Python-Powered Interpreter</title>
+</head>
+<body>
+
+<h1>Cintra GPL</h1>
+<p><strong>A tiny educational programming language whose interpreter is written in Python.</strong></p>
+
+<hr>
+
+<h2>1. What is Cintra GPL?</h2>
+
+<p>
+Cintra GPL is a small "general purpose language" that you write line by line in a plain text file.
+The interpreter (the file <code>Cintra GPL python interpreter.txt</code>) is a single Python script.
+It reads your program one line at a time, looks at the first word of the line, and decides what to do.
+</p>
+
+<p>
+The most important thing to understand: <strong>almost every expression in Cintra is evaluated by Python's
+<code>eval()</code></strong>. That means anything Python can evaluate — <code>2 + 2</code>,
+<code>"a" + "b"</code>, <code>len("hello")</code>, <code>str(42)</code> — works inside Cintra expressions.
+</p>
+
+<p>
+Every keyword exists in two forms: English and Russian. They do exactly the same thing.
+You can even mix them in one program.
+</p>
+
+<hr>
+
+<h2>2. How to run a program</h2>
+
+<ol>
+  <li>Save the interpreter as a Python file (for example <code>cintra.py</code>).</li>
+  <li>Write your program in a separate text file (for example <code>hello.cintra</code>).</li>
+  <li>Run the interpreter with Python 3:</li>
+</ol>
+
+<pre><code>python cintra.py
+Enter file name: hello.cintra
+</code></pre>
+
+<p>
+The interpreter asks for the file name, then runs the program. When the file ends normally it prints:
+</p>
+
+<pre><code>Program have been done with exit code 0.
+</code></pre>
+
+<hr>
+
+<h2>3. Hello, world</h2>
+
+<p>Create a file with one line:</p>
+
+<pre><code>out "Hello, world!"
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>Hello, world!
+</code></pre>
+
+<p>
+<code>out</code> evaluates everything after it as a Python expression and prints the result.
+Quotes are required for text, because the text is evaluated as a Python string.
+</p>
+
+<hr>
+
+<h2>4. Command reference</h2>
+
+<table border="1" cellpadding="4" cellspacing="0">
+  <tr>
+    <th>English</th>
+    <th>Russian</th>
+    <th>Syntax</th>
+    <th>What it does</th>
+  </tr>
+  <tr>
+    <td>out</td>
+    <td>вывести</td>
+    <td><code>out &lt;expression&gt;</code></td>
+    <td>Evaluates the expression and prints it.</td>
+  </tr>
+  <tr>
+    <td>in</td>
+    <td>ввести</td>
+    <td><code>in &lt;variable&gt;</code></td>
+    <td>Reads one line of input into the variable.</td>
+  </tr>
+  <tr>
+    <td>out_type</td>
+    <td>вывести_тип</td>
+    <td><code>out_type &lt;expression&gt;</code></td>
+    <td>Prints the Python type of the expression.</td>
+  </tr>
+  <tr>
+    <td>var</td>
+    <td>переменная</td>
+    <td><code>var name = value</code></td>
+    <td>Creates or overwrites a variable.</td>
+  </tr>
+  <tr>
+    <td>include</td>
+    <td>подключить</td>
+    <td><code>include module</code></td>
+    <td>Imports a Python module.</td>
+  </tr>
+  <tr>
+    <td>if / else / endif</td>
+    <td>если / иначе / конецесли</td>
+    <td><code>if cond:</code> ... <code>else:</code> ... <code>endif</code></td>
+    <td>Conditional block.</td>
+  </tr>
+  <tr>
+    <td>while / whileend</td>
+    <td>пока / покаконец</td>
+    <td><code>while cond:</code> ... <code>whileend</code></td>
+    <td>Loop block.</td>
+  </tr>
+  <tr>
+    <td>lambda</td>
+    <td>лямбда</td>
+    <td><code>lambda name args : out ...</code></td>
+    <td>Defines a function.</td>
+  </tr>
+  <tr>
+    <td>call</td>
+    <td>вызвать</td>
+    <td><code>call name arg1 arg2</code></td>
+    <td>Calls a function.</td>
+  </tr>
+  <tr>
+    <td>//</td>
+    <td>//</td>
+    <td><code>// text</code></td>
+    <td>Comment. Must be the whole line.</td>
+  </tr>
+</table>
+
+<h3>Assignment operators</h3>
+
+<p>A line can also be a plain assignment. The name comes first, then the operator, then the expression:</p>
+
+<pre><code>x = 5
+x += 1
+x -= 2
+x *= 3
+x /= 4
+x //= 2
+x %= 3
+x **= 2
+</code></pre>
+
+<hr>
+
+<h2>5. Variables</h2>
+
+<p>
+All variables live in one global Python dictionary called <code>stack</code>.
+There is no scoping, no <code>let</code>, no types — just names and Python values.
+</p>
+
+<pre><code>var x = 10
+var name = "Alice"
+var flag = True
+
+out x
+out name
+out flag
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>10
+Alice
+True
+</code></pre>
+
+<p>
+The <code>var</code> command ignores the third word, so <code>var x = 10</code> and
+<code>var x 10</code> behave the same way. Use the <code>=</code> form for readability.
+</p>
+
+<hr>
+
+<h2>6. Input</h2>
+
+<pre><code>out "What is your name?"
+in name
+out "Hello, " + name
+</code></pre>
+
+<p>Session:</p>
+
+<pre><code>What is your name?
+Bob
+Hello, Bob
+</code></pre>
+
+<h3>Important rule about numbers</h3>
+
+<p>
+<code>in</code> always reads a <em>string</em>, unless the variable already exists.
+If the variable already exists, the interpreter converts the input to the same type as the old value.
+</p>
+
+<p>So if you want to read a number, declare it first:</p>
+
+<pre><code>var age = 0
+in age
+out age + 1
+</code></pre>
+
+<p>
+Here <code>var age = 0</code> makes <code>age</code> an <code>int</code>, so the input
+<code>"20"</code> is converted with <code>int("20")</code> and the program prints <code>21</code>.
+</p>
+
+<p>
+If you forget the declaration, <code>age</code> becomes a string and
+<code>age + 1</code> will fail.
+</p>
+
+<hr>
+
+<h2>7. Conditions</h2>
+
+<pre><code>var age = 0
+in age
+
+if age >= 18:
+    out "You are an adult."
+else:
+    out "You are a minor."
+endif
+</code></pre>
+
+<p>Notes:</p>
+
+<ul>
+  <li>The colon at the end of <code>if</code> and <code>while</code> is optional — it is stripped away.</li>
+  <li>Indentation is only for humans. The interpreter uses <code>endif</code> to know where the block ends.</li>
+  <li><code>&amp;&amp;</code> is translated to Python <code>and</code>, and <code>||</code> to <code>or</code>.</li>
+</ul>
+
+<pre><code>var a = 5
+var b = 10
+
+if a > 0 && b > 0:
+    out "both positive"
+endif
+</code></pre>
+
+<p>
+Because conditions are evaluated by Python, you can also use <code>not</code>, comparisons,
+and any function available in Python.
+</p>
+
+<hr>
+
+<h2>8. Loops</h2>
+
+<pre><code>var i = 1
+
+while i <= 5:
+    out i
+    i += 1
+whileend
+
+out "Finished!"
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>1
+2
+3
+4
+5
+Finished!
+</code></pre>
+
+<p>
+Loops can be nested. The interpreter counts <code>while</code> / <code>whileend</code> pairs to find
+the matching end of the block.
+</p>
+
+<pre><code>var i = 1
+
+while i <= 3:
+    var j = 1
+    while j <= 3:
+        out i * j
+        j += 1
+    whileend
+    i += 1
+whileend
+</code></pre>
+
+<hr>
+
+<h2>9. Functions</h2>
+
+<p>Functions are defined with <code>lambda</code> and called with <code>call</code>.</p>
+
+<pre><code>lambda greet name : out "Hello, " + name
+call greet "World"
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>Hello, World
+</code></pre>
+
+<p>
+The part before the colon is the function name followed by its parameters.
+The part after the colon is the body. The body is translated into a Python statement —
+in practice <code>out</code>, <code>in</code> or <code>out_type</code>.
+</p>
+
+<pre><code>lambda add a b : out a + b
+call add 3 4
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>7
+</code></pre>
+
+<p>
+Arguments are evaluated before the call, so string arguments need quotes:
+<code>call greet "Ann"</code>.
+</p>
+
+<hr>
+
+<h2>10. Types</h2>
+
+<pre><code>out_type 5
+out_type "hello"
+out_type 3.14
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>&lt;class 'int'&gt;
+&lt;class 'str'&gt;
+&lt;class 'float'&gt;
+</code></pre>
+
+<p>
+This is useful for debugging when you are not sure whether <code>in</code> gave you a string or a number.
+</p>
+
+<hr>
+
+<h2>11. Comments</h2>
+
+<pre><code>// This line is ignored
+out "Visible line"
+// out "This one is not executed"
+</code></pre>
+
+<p>
+A comment must be a whole line that starts with <code>//</code>.
+You cannot put a comment at the end of a line of code.
+</p>
+
+<hr>
+
+<h2>12. Modules</h2>
+
+<pre><code>include math
+</code></pre>
+
+<p>
+<code>include</code> runs a Python <code>import</code>. Note that the module is not added to the
+variable stack, so you cannot write <code>math.sqrt(9)</code> afterwards. In the current version
+this command is mostly useful for modules that have side effects on import.
+</p>
+
+<hr>
+
+<h2>13. A complete example program</h2>
+
+<pre><code>// guess.cintra
+// A small program that prints a multiplication table
+
+var size = 0
+out "Table size?"
+in size
+
+var i = 1
+while i <= size:
+    var j = 1
+    while j <= size:
+        out i * j
+        j += 1
+    whileend
+    out "---"
+    i += 1
+whileend
+
+out "Done!"
+</code></pre>
+
+<p>Session with input <code>3</code>:</p>
+
+<pre><code>Table size?
+3
+1
+2
+3
+---
+2
+4
+6
+---
+3
+6
+9
+---
+Done!
+</code></pre>
+
+<hr>
+
+<h2>14. Known quirks and limitations</h2>
+
+<ul>
+  <li>
+    <strong>Undeclared numeric input.</strong> <code>in x</code> on a fresh name stores a string.
+    Declare it first with <code>var x = 0</code> if you need a number.
+  </li>
+  <li>
+    <strong>No-argument calls are unreliable.</strong> <code>call name</code> with no arguments
+    evaluates the call and then tries to execute the returned value as code.
+    It only works when the function returns <code>None</code>.
+  </li>
+  <li>
+    <strong><code>return</code> is not usable.</strong> It exists in the source but is marked as
+    unfinished and does not work as expected.
+  </li>
+  <li>
+    <strong>Blocks use keywords, not indentation.</strong> Every <code>if</code> needs an
+    <code>endif</code>, every <code>while</code> needs a <code>whileend</code>.
+  </li>
+  <li>
+    <strong>No <code>for</code> loop.</strong> Use <code>while</code> with a counter.
+  </li>
+  <li>
+    <strong>Bad conditions stop the program.</strong> If a condition cannot be evaluated, the
+    interpreter prints <code>BAD CONDITION on line N</code> and stops.
+  </li>
+  <li>
+    <strong>Errors inside <code>out</code> and <code>call</code> are not caught</strong> and will
+    crash the interpreter with a Python traceback.
+  </li>
+  <li>
+    <strong>One expression per line.</strong> The language is line-oriented; everything is
+    split on whitespace first.
+  </li>
+</ul>
+
+<hr>
+
+<h2>15. Summary</h2>
+
+<p>Cintra GPL is a small language built on top of Python's <code>eval()</code>. Its whole idea is:</p>
+
+<ol>
+  <li>Read a line.</li>
+  <li>Look at the first word.</li>
+  <li>If it is a keyword, do the keyword's job.</li>
+  <li>Otherwise, treat the line as a Python expression and evaluate it.</li>
+</ol>
+
+<p>
+That is why it is a good learning project: the interpreter is short, the rules are simple,
+and you can extend it with new keywords in a few lines of Python.
+</p>
+
+<hr>
+
+<p><small>Cintra GPL — educational interpreter documentation.</small></p>
+
+</body>
+</html>
