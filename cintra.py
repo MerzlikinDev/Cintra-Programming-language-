@@ -24,7 +24,7 @@ def parser_of_expressions(line: str) -> str: # parse line in lambda /function
     if line[0] in ("out_type", "вывести_тип"):
         return f'print({type(stack[line[1]])})'
     if line[0] in ("var", "переменная"):
-        return f'{line[1]} = {eval(" ".join(line[3:]))}'
+        return f'{line[1]} = {" ".join(line[3:])}'
     else:
         return " ".join(line)
 
@@ -38,7 +38,7 @@ def parser_of_expressions(line: str) -> str: # parse line in lambda /function
 
 class Function: # in beta, do not use it (dont works ifs etc)
     def __init__(self, name, args):
-        self.args = args
+        self.args = " ".join(args).rstrip(":").split()
         self.name = name
         self.body_lines = []
 
@@ -286,3 +286,4 @@ def run_code(file_name: str = "to_compile") -> int:
 
 file_name = input("Enter file name: ")
 run_code(file_name)
+      
