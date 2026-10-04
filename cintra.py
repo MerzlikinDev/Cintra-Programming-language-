@@ -4,9 +4,11 @@ stack = {}
 skip = 0 
 taken = 0
 
-def parser_of_expressions(line: str) -> str: # parse line in lambda 
+def parser_of_expressions(line: str) -> str: # parse line in lambda /function
     global stack
     line = line.split()
+    if not line:
+        return ""
     if line[0] in ("out", "вывести"):
         return f'print({" ".join(line[1:])})'
     if line[0] in ("in", "ввести"):
@@ -19,8 +21,39 @@ def parser_of_expressions(line: str) -> str: # parse line in lambda
         return f'{func}({args})'
     if line[0] in ("return", "вернуть"):
         return f'return {parser_of_expressions(" ".join(line[1:]))}'
+    if line[0] in ("out_type", "вывести_тип"):
+        return f'print({type(stack[line[1]])})'
+    if line[0] in ("var", "переменная"):
+        return f'{line[1]} = {eval(" ".join(line[3:]))}'
     else:
         return " ".join(line)
+
+
+
+
+
+# Goal: make big functions, not lambdas. 
+# kinda like 'func' and 'funcend'
+
+
+class Function: # in beta, do not use it (dont works ifs etc)
+    def __init__(self, name, args):
+        self.args = args
+        self.name = name
+        self.body_lines = []
+
+    def add_line(self, raw_line):
+        translated = parser_of_expressions(raw_line.strip())
+        self.body_lines.append(translated)
+
+    def end_of_init(self):
+        body = "\n".join("    " + l for l in self.body_lines)
+        if not body.strip():
+            body = "    pass"
+        code = f'def {self.name}({", ".join(self.args)}):\n{body}'
+        exec(code, stack)
+
+
 def understand_line(line: list, count_of_lines: int) -> int:
     global stack, taken, skip
     if line[0] == "if" or line[0] == "если":
@@ -201,6 +234,24 @@ def run_code(file_name: str = "to_compile") -> int:
                 continue
             if line[0] in ("call", "вызвать"):
                 understand_line(line, count_of_lines)
+                continue
+            if line[0] in ('func', 'функция'):
+                name = line[1]
+                args = line[2:]
+                function = Function(name, args)
+                while True:
+                    raw = file.readline()
+                    if raw == "":
+                        print("MISSING funcend")
+                        return 1
+                    count_of_lines += 1
+                    l = raw.split()
+                    if not l:
+                        continue
+                    if l[0] in ("funcend", "конецфункции"):
+                        break
+                    function.add_line(raw)
+                function.end_of_init()
                 continue
             if line[0] in ("while", "пока"):
                 cond = " ".join(line[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
