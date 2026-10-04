@@ -5,6 +5,7 @@ skip = 0
 taken = 0
 
 def parser_of_expressions(line: str) -> str: # parse line in lambda 
+    global stack
     line = line.split()
     if line[0] in ("out", "вывести"):
         return f'print({" ".join(line[1:])})'
@@ -12,8 +13,14 @@ def parser_of_expressions(line: str) -> str: # parse line in lambda
         return f'{line[1]} = input()'
     if line[0] in ("out_type", "вывести_тип"):
         return f'print({type(line[1])})'
-    if line[0] in ("return", "вернуть"): # do not use it. Unusable thing btw 
+    if line[0] in ("call", "вызвать"):
+        func = line[1]
+        args = ", ".join(line[2:])
+        return f'{func}({args})'
+    if line[0] in ("return", "вернуть"):
         return f'return {parser_of_expressions(" ".join(line[1:]))}'
+    else:
+        return " ".join(line)
 def understand_line(line: list, count_of_lines: int) -> int:
     global stack, taken, skip
     if line[0] == "if" or line[0] == "если":
@@ -37,7 +44,7 @@ def understand_line(line: list, count_of_lines: int) -> int:
         return 0
 
     if line[0] == "out" or line[0] == "вывести":
-        print(eval(" ".join(line[1:]), {}, stack))
+        print(eval(parser_of_expressions(" ".join(line[1:])), {}, stack))
         return 0
     if line[0] in ("in", "ввести"):
         var = line[1]
@@ -73,7 +80,7 @@ def understand_line(line: list, count_of_lines: int) -> int:
     if line[0] in ("call", "вызвать"):
         full_line = line[1:]
         if len(full_line) == 1:
-            exec(f'{stack[line[1]]()}', stack)
+            stack[line[1]]()
         else:
             args = [eval(a, {}, stack) for a in line[2:]]
             stack[line[1]](*args)
