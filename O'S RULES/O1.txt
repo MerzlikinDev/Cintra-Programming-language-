@@ -11,7 +11,6 @@ Improved Version
     File encoding: UTF-8.
 
     Indentation: 4 spaces. Tabs are forbidden.
-
     Maximum line length: 79 characters.
 
     Blank lines: two between major blocks, one inside a block.
