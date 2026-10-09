@@ -3,6 +3,7 @@ import importlib
 stack = {}
 skip = 0 
 taken = 0
+is_module = False
 if_last = False
 
 
@@ -132,7 +133,7 @@ class Function:
 
 
 def understand_line(line: list, count_of_lines: int) -> int:
-    global stack, taken, skip
+    global stack, taken, skip, is_module
     if line[0] == "if" or line[0] == "если":
         cond = " ".join(line[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
         try:
@@ -280,16 +281,19 @@ def run_block(body: list, body_nums: int) -> int:
 
 
 def run_code(file_name: str = "to_compile") -> int:
-    global stack, taken, skip
+    global stack, taken, skip, is_module
     with open(file_name, 'r') as file:
         count_of_lines = 0
 
         while True:
             raw = file.readline()
-            if raw == "":
+            if raw == "" and is_module == False:
                 print("Program have been done with exit code 0.")
                 return 0
-
+            elif raw == "" and is_module == True:
+                print("module on cintra included")
+                is_module = False
+                return 0
             count_of_lines += 1
             line = better_than_split(raw)
             if not line:
@@ -315,6 +319,10 @@ def run_code(file_name: str = "to_compile") -> int:
                 continue
             if line[0] in ("call", "вызвать"):
                 understand_line(line, count_of_lines)
+                continue
+            if line[0] in ("cintrafile", "файлцинтра"):
+                is_module = True
+                run_code(f'{line[1]}')
                 continue
             if line[0] in ('func', 'функция'):
                 header = " ".join(line[1:]).rstrip(":").strip()
