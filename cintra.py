@@ -5,7 +5,29 @@ skip = 0
 taken = 0
 if_last = False
 
-def translate_block(lines):
+
+# goal : make something that can parse line without split, cuz now "i=1" != "i = 1" (i will fix it mb) 
+
+def my_parser_better_than_split_yeeeh(line: str) -> list[str]:
+    char = 0
+    res = []
+    while char < len(line):
+        token = ""
+        if line[char] == " ":
+            char += 1
+            continue
+        predicate = line[char].isalpha()
+        token += line[char]
+        try:
+            while line[char+1].isalpha() == predicate:
+                token += line[char+1]
+                char+=1
+            res.append(token)
+        except:
+            res.append(token)
+            return res
+
+def translate_block(lines: list) -> str:
     result = []
     indent = 0
     for raw in lines:
