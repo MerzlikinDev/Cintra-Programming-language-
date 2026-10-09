@@ -66,10 +66,12 @@ def parser_of_expressions(line: str) -> str: # parse line in lambda /function
         return f'return {parser_of_expressions(" ".join(line[1:]))}'
     if line[0] in ("out_type", "вывести_тип"):
         return f'print({type(stack[line[1]])})'
-    if line[0] in ("var", "переменная"):
+    if line[0] in ("var", "let", "переменная"):
         return f'{line[1]} = {" ".join(line[3:])}'
     if line[0] in ("if", "если"):
         return f'if {" ".join(line[1:])}'
+    if line[0] in ("push", "добавить"):
+        return f'{line[1]}.append({eval(line[2], {}, stack)})'
     else:
         return " ".join(line)
 
@@ -164,7 +166,10 @@ def understand_line(line: list, count_of_lines: int) -> int:
             args = [eval(a, {}, stack) for a in line[2:]]
             stack[line[1]](*args)
         return 0
-    if line[0] in ("var", "переменная"):
+    if line[0] in ("push", "добавить"):
+        stack[line[1]].append(eval(line[2], {}, stack))
+        return 0
+    if line[0] in ("var", "let", "переменная"):
         stack[line[1]] = eval(" ".join(line[3:]), {}, stack)
         return 0
     try:
@@ -302,6 +307,9 @@ def run_code(file_name: str = "to_compile") -> int:
                         break
                     function.add_line(raw)
                 function.end_of_init()
+                continue
+            if line[0] in ("push", "добавить"):
+                stack[line[1]].append(eval(line[2], {}, stack))
                 continue
             if line[0] in ("while", "пока"):
                 cond = " ".join(line[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
