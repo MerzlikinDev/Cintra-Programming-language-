@@ -1,0 +1,8 @@
+// module with fibonacci 
+
+func getfibelement(element):
+  if (element == 1 || element == 0):
+    return 1
+  endif
+  return getfibelement(element - 1) + getfibelement(element - 2)
+funcend
