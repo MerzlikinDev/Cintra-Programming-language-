@@ -8,24 +8,28 @@ if_last = False
 
 # goal : make something that can parse line without split, cuz now "i=1" != "i = 1" (i will fix it mb) 
 
-def my_parser_better_than_split_yeeeh(line: str) -> list[str]:
+def better_than_split(line: str) -> list[str]:
     char = 0
     res = []
     while char < len(line):
-        token = ""
-        if line[char] == " ":
+        if line[char].isspace():
             char += 1
             continue
-        predicate = line[char].isalpha()
-        token += line[char]
-        try:
-            while line[char+1].isalpha() == predicate:
-                token += line[char+1]
-                char+=1
-            res.append(token)
-        except:
-            res.append(token)
-            return res
+        predicate1 = line[char].isalpha()
+        predicate2 = line[char].isdigit()
+        token = line[char]
+        while char + 1 < len(line) and line[char + 1].isalpha() == predicate1 and line[char+1].isdigit() == predicate2:
+            if line[char+1].isspace():
+                break
+            token += line[char + 1]
+            char += 1
+            
+        res.append(token)
+        char += 1
+        
+    return res
+
+
 
 def translate_block(lines: list) -> str:
     result = []
@@ -34,7 +38,7 @@ def translate_block(lines: list) -> str:
         line = raw.strip()
         if not line or line.startswith("//"):
             continue
-        tokens = line.split()
+        tokens = better_than_split(line)
         if not tokens:
             continue
         kw = tokens[0]
@@ -71,7 +75,7 @@ def translate_block(lines: list) -> str:
 
 def parser_of_expressions(line: str) -> str: # parse line in lambda /function
     global stack
-    line = line.split()
+    line = better_than_split(line)
     if not line:
         return ""
     if line[0] in ("out", "вывести"):
@@ -107,7 +111,10 @@ def parser_of_expressions(line: str) -> str: # parse line in lambda /function
 
 class Function:
     def __init__(self, name, args):
-        self.args = " ".join(args).rstrip(":").split()
+        if isinstance(args, str):
+            self.args = args.rstrip(":").split()
+        else:
+            self.args = list(args)
         self.name = name
         self.body_lines = []
 
@@ -284,7 +291,7 @@ def run_code(file_name: str = "to_compile") -> int:
                 return 0
 
             count_of_lines += 1
-            line = raw.split()
+            line = better_than_split(raw)
             if not line:
                 continue
 
@@ -310,11 +317,15 @@ def run_code(file_name: str = "to_compile") -> int:
                 understand_line(line, count_of_lines)
                 continue
             if line[0] in ('func', 'функция'):
-                name = line[1].rstrip(":")
-                if len(line) > 2:
-                    args = line[2:]
+                header = " ".join(line[1:]).rstrip(":").strip()
+                if "(" in header:
+                    name = header.split("(")[0].strip()
+                    inner = header[header.index("(")+1:header.rindex(")")]
+                    args = [a.strip() for a in inner.split(",") if a.strip()]
                 else:
-                    args = []
+                    parts = header.split()
+                    name = parts[0] if parts else ""
+                    args = parts[1:]
                 function = Function(name, args)
                 while True:
                     raw = file.readline()
@@ -322,7 +333,7 @@ def run_code(file_name: str = "to_compile") -> int:
                         print("MISSING funcend")
                         return 1
                     count_of_lines += 1
-                    l = raw.split()
+                    l = better_than_split(raw)
                     if not l:
                         continue
                     if l[0] in ("funcend", "конецфункции"):
@@ -344,7 +355,7 @@ def run_code(file_name: str = "to_compile") -> int:
                         print("MISSING whileend")
                         return 1
                     count_of_lines += 1
-                    l2 = raw2.split()
+                    l2 = better_than_split(raw2)
                     if not l2:
                         continue
                     if l2[0] in ("while", "пока"):
