@@ -3,6 +3,49 @@ import importlib
 stack = {}
 skip = 0 
 taken = 0
+if_last = False
+
+def translate_block(lines):
+    result = []
+    indent = 0
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("//"):
+            continue
+        tokens = line.split()
+        if not tokens:
+            continue
+        kw = tokens[0]
+
+        if kw in ("if", "если"):
+            cond = " ".join(tokens[1:]).rstrip(":")
+            cond = cond.replace("&&", "and").replace("||", "or")
+            result.append("    " * indent + f"if {cond}:")
+            indent += 1
+
+        elif kw.rstrip(":") in ("else", "иначе"):
+            indent -= 1
+            result.append("    " * indent + "else:")
+            indent += 1
+
+        elif kw in ("endif", "конецесли"):
+            indent -= 1
+
+        elif kw in ("while", "пока"):
+            cond = " ".join(tokens[1:]).rstrip(":")
+            cond = cond.replace("&&", "and").replace("||", "or")
+            result.append("    " * indent + f"while {cond}:")
+            indent += 1
+
+        elif kw in ("whileend", "покаконец"):
+            indent -= 1
+
+        else:
+            translated = parser_of_expressions(line)
+            if translated:
+                result.append("    " * indent + translated)
+
+    return "\n".join(result)
 
 def parser_of_expressions(line: str) -> str: # parse line in lambda /function
     global stack
@@ -25,6 +68,8 @@ def parser_of_expressions(line: str) -> str: # parse line in lambda /function
         return f'print({type(stack[line[1]])})'
     if line[0] in ("var", "переменная"):
         return f'{line[1]} = {" ".join(line[3:])}'
+    if line[0] in ("if", "если"):
+        return f'if {" ".join(line[1:])}'
     else:
         return " ".join(line)
 
@@ -36,19 +81,20 @@ def parser_of_expressions(line: str) -> str: # parse line in lambda /function
 # kinda like 'func' and 'funcend'
 
 
-class Function: # in beta, do not use it (dont works ifs etc)
+class Function:
     def __init__(self, name, args):
         self.args = " ".join(args).rstrip(":").split()
         self.name = name
         self.body_lines = []
 
     def add_line(self, raw_line):
-        translated = parser_of_expressions(raw_line.strip())
-        self.body_lines.append(translated)
+        self.body_lines.append(raw_line)
 
     def end_of_init(self):
-        body = "\n".join("    " + l for l in self.body_lines)
-        if not body.strip():
+        body = translate_block(self.body_lines)
+        if body.strip():
+            body = "\n".join("    " + line for line in body.splitlines())
+        else:
             body = "    pass"
         code = f'def {self.name}({", ".join(self.args)}):\n{body}'
         exec(code, stack)
@@ -229,6 +275,7 @@ def run_code(file_name: str = "to_compile") -> int:
                 elif line[0].rstrip(":") in ("else", "иначе") and skip == 1:
                     skip = 0
                 continue
+
             if line[0] in ("lambda", "лямбда"):
                 understand_line(line, count_of_lines)
                 continue
@@ -236,8 +283,11 @@ def run_code(file_name: str = "to_compile") -> int:
                 understand_line(line, count_of_lines)
                 continue
             if line[0] in ('func', 'функция'):
-                name = line[1]
-                args = line[2:]
+                name = line[1].rstrip(":")
+                if len(line) > 2:
+                    args = line[2:]
+                else:
+                    args = []
                 function = Function(name, args)
                 while True:
                     raw = file.readline()
@@ -286,4 +336,3 @@ def run_code(file_name: str = "to_compile") -> int:
 
 file_name = input("Enter file name: ")
 run_code(file_name)
-      
