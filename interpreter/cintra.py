@@ -5,7 +5,7 @@ skip = 0
 taken = 0
 is_module = False
 if_last = False
-
+is_python = False
 
 # goal : make something that can parse line without split, cuz now "i=1" != "i = 1" (i will fix it mb) 
 
@@ -133,7 +133,7 @@ class Function:
 
 
 def understand_line(line: list, count_of_lines: int) -> int:
-    global stack, taken, skip, is_module
+    global stack, taken, skip, is_module, is_python
     if line[0] == "if" or line[0] == "если":
         cond = " ".join(line[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
         try:
@@ -222,8 +222,10 @@ def understand_line(line: list, count_of_lines: int) -> int:
         elif op_tok == "//=":
             stack[name] //= eval(expr, {}, stack)
         else:
-            print(f"BAD KEYWORDS on line {count_of_lines}")
-            return 1
+            if is_python:
+                exec(" ".join(line), {}, stack)
+            else:
+                return 1
     except Exception as e:
         print(f"BAD KEYWORDS on line {count_of_lines}: {e}")
         return 1
@@ -281,7 +283,7 @@ def run_block(body: list, body_nums: int) -> int:
 
 
 def run_code(file_name: str = "to_compile") -> int:
-    global stack, taken, skip, is_module
+    global stack, taken, skip, is_module, is_python
     with open(file_name, 'r') as file:
         count_of_lines = 0
 
@@ -353,6 +355,14 @@ def run_code(file_name: str = "to_compile") -> int:
                 continue
             if line[0] in ("push", "добавить"):
                 stack[line[1]].append(eval(line[2], {}, stack))
+                continue
+            if line[0] in ("pythonblock", "блокпитона"):
+                is_python = True
+                print('Python block running...')
+                continue
+            if line[0] in ("pythonend", "конецпитона"):
+                is_python = False
+                print("Python block ended")
                 continue
             if line[0] in ("while", "пока"):
                 cond = " ".join(line[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
