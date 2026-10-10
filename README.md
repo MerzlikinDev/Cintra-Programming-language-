@@ -1,4 +1,4 @@
-# Cintra GPL — Language Reference
+# Cintra GPL — programming language
 
 A small line-based interpreted programming language written in Python. It supports bilingual keywords (English and Russian), variables, control flow, functions, lambdas, modules, and basic list operations.
 
