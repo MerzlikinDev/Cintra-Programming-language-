@@ -313,7 +313,9 @@ def run_code(file_name: str = "to_compile") -> int:
                 elif line[0].rstrip(":") in ("else", "иначе") and skip == 1:
                     skip = 0
                 continue
-
+            else:
+                if line[0] not in ("else", "if", "while", "func"):
+                    line = better_than_split(" ".join(line).rstrip(";"))
             if line[0] in ("lambda", "лямбда"):
                 understand_line(line, count_of_lines)
                 continue
