@@ -19,7 +19,7 @@ def better_than_split(line: str) -> list[str]:
         predicate1 = line[char].isalpha()
         predicate2 = line[char].isdigit()
         token = line[char]
-        while char + 1 < len(line) and line[char + 1].isalpha() == predicate1 and line[char+1].isdigit() == predicate2:
+        while char + 1 < len(line) and (line[char + 1].isalpha() == predicate1 and line[char+1].isdigit() == predicate2 or line[char+1] in ("_", ".")):
             if line[char+1].isspace():
                 break
             token += line[char + 1]
