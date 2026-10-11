@@ -19,28 +19,32 @@ def better_than_split(line: str) -> list[str]:
         predicate1 = line[char].isalpha()
         predicate2 = line[char].isdigit()
         token = line[char]
-        while char + 1 < len(line) and (line[char + 1].isalpha() == predicate1 and line[char+1].isdigit() == predicate2 or line[char+1] in ("_", ".")):
+        while char + 1 < len(line) and ((line[char + 1].isalpha() == predicate1 and line[char+1].isdigit() == predicate2 or line[char+1] in ("_", ".")) or line[char] == "_"):
             if line[char+1].isspace():
                 break
             token += line[char + 1]
             char += 1
-            
+            predicate1 = line[char].isalpha()
+            predicate2 = line[char].isdigit()
         res.append(token)
         char += 1
         
     return res
 
 
-
 def translate_block(lines: list) -> str:
     result = []
     indent = 0
-    for raw in lines:
+    i = 0
+    while i < len(lines):
+        raw = lines[i]
         line = raw.strip()
         if not line or line.startswith("//"):
+            i += 1
             continue
         tokens = better_than_split(line)
         if not tokens:
+            i += 1
             continue
         kw = tokens[0]
 
@@ -67,10 +71,53 @@ def translate_block(lines: list) -> str:
         elif kw in ("whileend", "покаконец"):
             indent -= 1
 
+        elif kw in ("func", "функция"):
+            header = " ".join(tokens[1:]).rstrip(":").strip()
+            if "(" in header:
+                name = header.split("(")[0].strip()
+                inner = header[header.index("(") + 1:header.rindex(")")]
+                args = [a.strip() for a in inner.split(",") if a.strip()]
+            else:
+                parts = header.split()
+                name = parts[0] if parts else ""
+                args = parts[1:]
+            body_lines = []
+            depth = 0
+            j = i + 1
+            while j < len(lines):
+                t2 = better_than_split(lines[j].strip())
+                if t2:
+                    if t2[0] in ("func", "функция"):
+                        depth += 1
+                    elif t2[0] in ("funcend", "конецфункции"):
+                        if depth == 0:
+                            break
+                        depth -= 1
+                body_lines.append(lines[j])
+                j += 1
+
+            all_args = ["self"] + args
+            result.append("    " * indent + f'def {name}({", ".join(all_args)}):')
+            indent += 1
+            inner_code = translate_block(body_lines)
+            if inner_code.strip():
+                for bl in inner_code.splitlines():
+                    result.append("    " * indent + bl)
+            else:
+                result.append("    " * indent + "pass")
+            
+            indent -= 1
+            i = j
+
+        elif kw in ("funcend", "конецфункции"):
+            pass
+
         else:
             translated = parser_of_expressions(line)
             if translated:
                 result.append("    " * indent + translated)
+
+        i += 1
 
     return "\n".join(result)
 
@@ -130,7 +177,20 @@ class Function:
             body = "    pass"
         code = f'def {self.name}({", ".join(self.args)}):\n{body}'
         exec(code, stack)
-
+class struct: # YOU WANT OOP? YEAH?
+    def __init__(self, name):
+        self.name = name
+        self.body_lines = []
+    def add_line(self, line):
+        self.body_lines.append(line)
+    def end_of_init(self):
+        body = translate_block(self.body_lines)
+        if body.strip():
+            body = "\n".join("    " + line for line in body.splitlines())
+        else:
+            body = "    pass"
+        code = f'class {self.name}:\n{body}'
+        exec(code, stack)
 
 def understand_line(line: list, count_of_lines: int) -> int:
     global stack, taken, skip, is_module, is_python
@@ -225,7 +285,7 @@ def understand_line(line: list, count_of_lines: int) -> int:
             if is_python:
                 exec(" ".join(line), {}, stack)
             else:
-                return 1
+                print(f"SYNTAX ERROR on line {count_of_lines}")
     except Exception as e:
         print(f"BAD KEYWORDS on line {count_of_lines}: {e}")
         return 1
@@ -353,6 +413,28 @@ def run_code(file_name: str = "to_compile") -> int:
                     function.add_line(raw)
                 function.end_of_init()
                 continue
+
+            if line[0] in ('struct', 'структура'):
+                header = " ".join(line[1:]).rstrip(":").strip()
+                parts = header.split()
+                name = parts[0] if parts else ""
+                new_struct = struct(name)
+                while True:
+                    raw = file.readline()
+                    if raw == "":
+                        print("MISSING structend")
+                        return 1
+                    count_of_lines += 1
+                    l = better_than_split(raw)
+                    if not l:
+                        continue
+                    if l[0] in ("structend", "конецструктуры"):
+                        break
+                    new_struct.add_line(raw)
+                new_struct.end_of_init()
+                continue
+
+
             if line[0] in ("push", "добавить"):
                 stack[line[1]].append(eval(line[2], {}, stack))
                 continue
