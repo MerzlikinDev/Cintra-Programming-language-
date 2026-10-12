@@ -178,8 +178,9 @@ class Function:
         code = f'def {self.name}({", ".join(self.args)}):\n{body}'
         exec(code, stack)
 class struct: # YOU WANT OOP? YEAH?
-    def __init__(self, name):
+    def __init__(self, name, parent_class):
         self.name = name
+        self.parent_class = parent_class
         self.body_lines = []
     def add_line(self, line):
         self.body_lines.append(line)
@@ -189,7 +190,10 @@ class struct: # YOU WANT OOP? YEAH?
             body = "\n".join("    " + line for line in body.splitlines())
         else:
             body = "    pass"
-        code = f'class {self.name}:\n{body}'
+        if self.parent_class != "":
+            code = f'class {self.name}({self.parent_class}):\n{body}'
+        else:
+            code = f'class {self.name}:\n{body}'
         exec(code, stack)
 
 def understand_line(line: list, count_of_lines: int) -> int:
@@ -414,11 +418,16 @@ def run_code(file_name: str = "to_compile") -> int:
                 function.end_of_init()
                 continue
 
-            if line[0] in ('struct', 'структура'):
+            if line[0] in ('struct', 'class', 'класс', 'структура'):
                 header = " ".join(line[1:]).rstrip(":").strip()
                 parts = header.split()
                 name = parts[0] if parts else ""
-                new_struct = struct(name)
+                if len(parts) > 1:
+                    parent_class = parts[1]
+                
+                    new_struct = struct(name, parent_class)
+                else:
+                    new_struct = struct(name, "")
                 while True:
                     raw = file.readline()
                     if raw == "":
@@ -428,7 +437,7 @@ def run_code(file_name: str = "to_compile") -> int:
                     l = better_than_split(raw)
                     if not l:
                         continue
-                    if l[0] in ("structend", "конецструктуры"):
+                    if l[0] in ("structend", "конецструктуры", "конецкласса", "classend"):
                         break
                     new_struct.add_line(raw)
                 new_struct.end_of_init()
