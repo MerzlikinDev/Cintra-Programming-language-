@@ -1,0 +1,595 @@
+CINTRA PROGRAMMING LANGUAGE
+============================
+Interpreter Architecture & Language Reference
+Version: GPL (see GitHub Releases)
+Repository: https://github.com/MerzlikinDev/Cintra-Programming-language-
+
+--------------------------------------------------------------------
+TABLE OF CONTENTS
+--------------------------------------------------------------------
+1.  Overview
+2.  Quick Start
+3.  Architecture of the Interpreter
+    3.1  Tokenizer (better_than_split)
+    3.2  Transpiler (translate_block)
+    3.3  Expression Parser (parser_of_expressions)
+    3.4  Runtime Executor (understand_line & run_block)
+    3.5  Main Loop (run_code)
+4.  Language Reference
+    4.1  Comments
+    4.2  Variables & Assignment
+    4.3  Operators
+    4.4  Input / Output
+    4.5  Conditionals
+    4.6  Loops
+    4.7  Functions
+    4.8  Lambdas
+    4.9  Lists
+    4.10 OOP: struct / class
+    4.11 Modules & Python Blocks
+5.  Keyword Reference (English / Russian)
+6.  Known Limitations
+7.  Complete Examples
+8.  Versioning & Releases
+
+--------------------------------------------------------------------
+1. OVERVIEW
+--------------------------------------------------------------------
+Cintra is a small, line-based interpreted programming language
+written in Python. It supports bilingual keywords (English and
+Russian), variables, control flow, functions, lambdas, modules,
+basic list operations, and a prototype OOP system.
+
+The interpreter does NOT build an AST. Instead, it transpiles
+Cintra source code into Python code and executes it at runtime
+using exec() and eval(). This design was chosen for rapid
+development; it works correctly but imposes performance and
+semantic limitations described in Section 6.
+
+File extension convention: .ctr (not enforced).
+
+--------------------------------------------------------------------
+2. QUICK START
+--------------------------------------------------------------------
+Prerequisites: Python 3.
+
+Run the interpreter:
+    $ python cintra.py
+    Enter file name: my_program.ctr
+
+The interpreter reads the file line by line and executes it.
+When the end of file is reached, it prints:
+    Program have been done with exit code 0.
+
+If the file is loaded as a module (via cintrafile), it prints:
+    module on cintra included
+
+--------------------------------------------------------------------
+3. ARCHITECTURE OF THE INTERPRETER
+--------------------------------------------------------------------
+The interpreter lives in a single file: interpreter/cintra.py.
+It has five major components.
+
+3.1 TOKENIZER — better_than_split()
+--------------------------------------------------------------------
+Purpose: Convert a raw source line into a list of tokens.
+
+This is a hand-written tokenizer that does NOT use Python's
+str.split(). It scans characters one by one and groups them
+into tokens. A token is built from characters that are:
+  - letters (alpha)
+  - digits
+  - underscore _ or dot .
+
+The tokenizer stops a token when the next character has a
+different "alpha vs digit" classification, unless the current
+character is underscore.
+
+Example:
+    Input:  "i=1"
+    Output: ["i", "=", "1"]
+
+    Input:  "var x = 10"
+    Output: ["var", "x", "=", "10"]
+
+This tokenizer is intentionally simple. It does not handle
+string literals specially — strings are passed through as
+individual tokens and later reconstructed by joining.
+
+3.2 TRANSPILER — translate_block()
+--------------------------------------------------------------------
+Purpose: Convert a block of Cintra lines into valid Python code.
+
+This is the heart of the interpreter's "compilation" step.
+It processes a list of raw source lines and returns a string
+of Python code.
+
+How it works:
+
+  - It maintains an indentation level (indent).
+  - For each line, it checks the first token (the keyword).
+  - if / если      -> emits "if <cond>:" and increases indent
+  - else / иначе   -> decreases indent, emits "else:",
+                       increases indent
+  - endif / конецесли -> decreases indent
+  - while / пока   -> emits "while <cond>:" and increases indent
+  - whileend / покаконец -> decreases indent
+  - func / функция -> recursively collects the function body
+                       until funcend, then emits a Python
+                       def statement with "self" prepended
+                       to the argument list.
+  - struct/class   -> recursively collects the class body until
+                       structend/classend, then emits a Python
+                       class statement (with optional parent).
+
+  - All other lines are passed to parser_of_expressions().
+
+Important detail: The transpiler does NOT emit executable code
+for the main program flow. It is used only for function bodies
+and class bodies, which are then executed via exec().
+
+3.3 EXPRESSION PARSER — parser_of_expressions()
+--------------------------------------------------------------------
+Purpose: Translate a single Cintra expression line into Python.
+
+This function handles simple statement-level constructs:
+
+  out / вывести       -> "print(...)"
+  in / ввести          -> "var = input()"
+  out_type / вывести_тип -> "print(type(...))"
+  call / вызвать       -> "func(args)"
+  return / вернуть     -> "return <translated expr>"
+  var / let / переменная -> "name = expr"
+  if / если            -> "if <cond>"
+  push / добавить      -> "list.append(eval(...))"
+  otherwise            -> join tokens with spaces (raw Python)
+
+This function is NOT a full expression parser. It does not
+build a tree and does not handle operator precedence.
+It relies on Python's own eval() to compute expressions.
+
+3.4 RUNTIME EXECUTOR — understand_line() & run_block()
+--------------------------------------------------------------------
+Purpose: Execute a single tokenized line (or a block of lines)
+at runtime.
+
+understand_line() takes a tokenized line and a line number,
+and performs the corresponding action:
+
+  - if / если: evaluates the condition with eval().
+                If true, sets taken = 1; if false, sets skip = 1.
+  - else / иначе: if taken == 1, sets skip = 1 (skip the else).
+  - endif: resets taken = 0.
+  - out / вывести: evaluates and prints the expression.
+  - in / ввести: reads input; if the variable already exists,
+                  attempts type conversion.
+  - include / подключить: imports a Python module.
+  - out_type: prints the type of a value.
+  - lambda / лямбда: defines a lambda via exec().
+  - call / вызвать: calls a function from the stack.
+  - push / добавить: appends to a list.
+  - var / let / переменная: evaluates the expression and stores it.
+  - Assignment operators: =, +=, -=, *=, /=, %=, **=, //=
+    are handled directly on the stack dictionary.
+  - pythonblock / блокпитона: enables raw Python mode.
+  - pythonend / конецпитона: disables raw Python mode.
+
+run_block() handles while loops. It collects the loop body
+until whileend, then repeatedly calls run_block() on the body
+while the condition is true.
+
+3.5 MAIN LOOP — run_code()
+--------------------------------------------------------------------
+Purpose: Read a .ctr file line by line and dispatch each line
+to the appropriate handler.
+
+The main loop:
+
+  1. Reads a line from the file.
+  2. Tokenizes it.
+  3. If skip > 0, it tracks nested if/while blocks to know
+     when to resume execution.
+  4. Dispatches based on the first token:
+     - lambda, call       -> understand_line()
+     - cintrafile         -> recursive run_code() as module
+     - func               -> collects body, builds Function object,
+                             calls end_of_init() which uses exec()
+     - struct/class       -> collects body, builds struct object,
+                             calls end_of_init() which uses exec()
+     - push               -> direct append
+     - pythonblock/pythonend -> toggles raw Python mode
+     - while              -> collects body, runs loop
+     - otherwise          -> understand_line()
+
+--------------------------------------------------------------------
+4. LANGUAGE REFERENCE
+--------------------------------------------------------------------
+
+4.1 COMMENTS
+--------------------------------------------------------------------
+Use // to start a comment. Full-line comments are ignored.
+Inline comments are not officially supported but may work
+in some contexts.
+
+    // this is a comment
+
+4.2 VARIABLES & ASSIGNMENT
+--------------------------------------------------------------------
+Declare a variable with var, let, or переменная:
+
+    var x = 10
+    let name = "Alice"
+    переменная pi = 3.14
+
+Direct assignment without a keyword also works:
+
+    x = 10
+    y = x + 5
+
+All variables live in a single global dictionary called stack.
+There is no block scoping.
+
+Assignment operators:
+
+    =   assign
+    +=  add and assign
+    -=  subtract and assign
+    *=  multiply and assign
+    /=  divide and assign
+    //= floor divide and assign
+    %=  modulo and assign
+    **= power and assign
+
+4.3 OPERATORS
+--------------------------------------------------------------------
+Logical:    && (translated to and), || (translated to or)
+Comparison: ==, !=, <, >, <=, >=
+Arithmetic: +, -, *, /, //, %, **
+
+Operator precedence follows Python's rules because expressions
+are evaluated by Python's eval().
+
+4.4 INPUT / OUTPUT
+--------------------------------------------------------------------
+Print:      out "Hello, world!"
+            вывести 42
+            out x + y
+
+Read input: in name
+            ввести age
+
+If the variable already exists, the interpreter attempts to
+convert the input to the same type. Otherwise, it stores a string.
+
+Print type: out_type x
+            вывести_тип y
+
+4.5 CONDITIONALS
+--------------------------------------------------------------------
+    if x > 10
+        out "big"
+    else
+        out "small"
+    endif
+
+Russian form:
+
+    если x > 10
+        вывести "большое"
+    иначе
+        вывести "маленькое"
+    конецесли
+
+Rules:
+  - The if line accepts : at the end (optional).
+  - else / иначе is optional.
+  - endif / конецесли closes the block.
+  - Nested if/else works, but else handles only a single
+    if scope. Deep nesting may behave unexpectedly.
+
+4.6 LOOPS
+--------------------------------------------------------------------
+Only while loops are supported.
+
+    var i = 0
+    while i < 5
+        out i
+        i += 1
+    whileend
+
+Russian form:
+
+    пока i < 5
+        вывести i
+        i += 1
+    покаконец
+
+Loops can be nested. Each while must be matched with a whileend.
+
+4.7 FUNCTIONS
+--------------------------------------------------------------------
+Define a function with func / функция and close with
+funcend / конецфункции.
+
+    func greet(name)
+        out "Hello, " + name
+    funcend
+    call greet("Alice")
+
+Russian form:
+
+    функция add(a, b)
+        return a + b
+    конецфункции
+    вызвать add(2, 3)
+
+Return values: return / вернуть.
+
+Function definitions are transpiled into Python def statements
+and executed via exec(). The transpiler automatically prepends
+"self" to the argument list, which is a side effect of the
+prototype OOP system.
+
+Calling a function: call greet("Bob") / вызвать add(1, 2)
+
+4.8 LAMBDAS
+--------------------------------------------------------------------
+Lambdas are supported (beta) using lambda / лямбда.
+
+Syntax:
+
+    lambda double x : x * 2
+    call double(5)
+
+The part before : is the name and parameters. The part after :
+is the expression. The interpreter builds a Python def statement
+and executes it.
+
+Lambdas must be defined before use.
+
+4.9 LISTS
+--------------------------------------------------------------------
+Use push / добавить to append to a list.
+
+    var items = []
+    push items 10
+    push items 20
+    out items
+
+The expression after the list name is evaluated before appending.
+
+4.10 OOP: STRUCT / CLASS
+--------------------------------------------------------------------
+Cintra supports a prototype OOP system using struct / class /
+класс / структура.
+
+Declaration:
+
+    struct Point
+        // class body
+    structend
+
+Russian form:
+
+    класс Animal
+        // class body
+    конецкласса
+
+Inheritance: if a second word follows the class name, it becomes
+the parent class.
+
+    class Dog Animal
+        // Dog inherits from Animal
+    classend
+
+Inside the class body, you can define methods. The transpiler
+automatically prepends "self" to method arguments, so methods
+receive the instance as their first parameter.
+
+The class is transpiled into a Python class statement and
+executed via exec().
+
+4.11 MODULES & PYTHON BLOCKS
+--------------------------------------------------------------------
+Import a Python module:
+
+    include math
+    подключить math
+
+Run another Cintra file as a module:
+
+    cintrafile other_module
+    файлцинтра другой_модуль
+
+This executes the given file in module mode. The file should
+not have an extension.
+
+Raw Python block:
+
+    pythonblock
+        // raw Python code here
+    pythonend
+
+Inside a pythonblock, lines are executed directly as Python
+code via exec().
+
+--------------------------------------------------------------------
+5. KEYWORD REFERENCE (English / Russian)
+--------------------------------------------------------------------
+Concept               | English        | Russian
+----------------------|----------------|------------------
+If                    | if             | если
+Else                  | else           | иначе
+End if                | endif          | конецесли
+While                 | while          | пока
+End while             | whileend       | покаконец
+Function              | func           | функция
+End function          | funcend        | конецфункции
+Return                | return         | вернуть
+Lambda                | lambda         | лямбда
+Call                  | call           | вызвать
+Print                 | out            | вывести
+Input                 | in             | ввести
+Print type            | out_type       | вывести_тип
+Variable              | var / let      | переменная
+Push to list          | push           | добавить
+Include module        | include        | подключить
+Load Cintra file      | cintrafile     | файлцинтра
+Class                 | struct / class | класс / структура
+End class             | structend /    | конецструктуры /
+                      | classend       | конецкласса
+
+--------------------------------------------------------------------
+6. KNOWN LIMITATIONS
+--------------------------------------------------------------------
+These are current, documented limitations of the interpreter.
+They are not bugs; they are consequences of the transpilation
+architecture and the prototype stage of the language.
+
+1. Single global scope.
+   All variables live in one dictionary called stack. There is
+   no block scoping, no local variables, no closures in the
+   traditional sense.
+
+2. Transpilation via exec() and eval().
+   The interpreter generates Python code as strings and executes
+   it. This means:
+   - Parsing happens twice (Cintra -> Python string -> Python AST).
+   - Tracebacks show generated Python lines, not Cintra lines.
+   - Performance is limited by Python's exec/eval overhead.
+   - Arbitrary Python code can be executed if the user writes
+     it (a security concern for untrusted scripts).
+
+3. No AST.
+   There is no abstract syntax tree. The "parser" is a
+   line-by-line translator. This limits the ability to add
+   complex syntax, operator overloading, or advanced static
+   analysis.
+
+4. else handles only one if scope.
+   Nested if/else inside loops works, but the else branch
+   is associated with only the innermost if. This can lead
+   to unexpected behavior in complex nesting.
+
+5. Lambdas must be defined before use.
+   There is no hoisting. A lambda or function must appear in
+   the source before it is called.
+
+6. Type conversion on input is limited.
+   Input conversion is attempted only if the variable already
+   exists in the stack. Otherwise, input is stored as a string.
+
+7. Function arguments automatically receive "self".
+   The transpiler prepends "self" to every function argument
+   list. This is a side effect of the prototype OOP system
+   and may cause confusion when calling functions outside
+   a class context.
+
+8. Error messages are basic.
+   Errors print messages like "BAD CONDITION on line N" or
+   "SYNTAX ERROR on line N". There is no column information,
+   no stack trace, and no suggestion for fixes.
+
+--------------------------------------------------------------------
+7. COMPLETE EXAMPLES
+--------------------------------------------------------------------
+
+FIZZBUZZ
+--------
+// FizzBuzz in Cintra
+var i = 1
+while i <= 20
+    if i % 15 == 0
+        out "FizzBuzz"
+    else if i % 3 == 0
+        out "Fizz"
+    else if i % 5 == 0
+        out "Buzz"
+    else
+        out i
+    endif
+    endif
+    endif
+    i += 1
+whileend
+
+FUNCTION + LAMBDA
+-----------------
+// Function + lambda example
+func square(x)
+    return x * x
+funcend
+lambda triple x : x * 3
+var n = 7
+call square(n)
+call triple(n)
+
+CLASS WITH INHERITANCE
+----------------------
+struct Animal
+    func speak()
+        out "..."
+    funcend
+structend
+
+class Dog Animal
+    func speak()
+        out "Woof"
+    funcend
+classend
+
+// Usage (prototype):
+// var d = Dog()
+// call d.speak()
+
+RUSSIAN SYNTAX EXAMPLE
+----------------------
+// Пример на русском синтаксисе
+переменная счётчик = 0
+пока счётчик < 3
+    вывести "Счётчик: " + счётчик
+    счётчик += 1
+покаконец
+
+--------------------------------------------------------------------
+8. VERSIONING & RELEASES
+--------------------------------------------------------------------
+Cintra uses GitHub Releases for versioning. Release tags follow
+the pattern v.0.0.X.
+
+Notable releases (from GitHub Releases page):
+
+  - inheritance update
+    Added: inheritance, keywords "class" and "classend"
+    (struct and structend still work).
+
+  - Structures update
+
+  - Cintra files import, good syntax and ";"
+
+  - syntax update, write comfortable now!
+    New parser: both "let a=5" and "let a = 5" work.
+
+  - functions release (FIRST RELEASE VERSION)
+    Supports: I/O, if/else, whiles, lambdas, functions.
+
+  - include and use modules on Cintra
+    Added cintrafile keyword.
+
+  - calls && returns (Pre-release)
+    Return values from lambdas; call functions in "out".
+
+  - RELEASE OF LAMBDAS (Pre-release)
+    Fixed lambdas and their bodies.
+
+  - FUNCTIONS && WHILES && IN/OUT && VARIABLES etc
+    Update cintra.py
+
+  - VERSION 0.0.3
+
+To see the full list, visit:
+https://github.com/MerzlikinDev/Cintra-Programming-language-/releases
+
+--------------------------------------------------------------------
+END OF DOCUMENT
+--------------------------------------------------------------------
