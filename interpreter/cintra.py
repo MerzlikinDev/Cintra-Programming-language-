@@ -1,4 +1,5 @@
 # Cintra GPL python interpreter
+# I had known that my language interpreter - transpiler (13.10.2026)
 import importlib
 stack = {}
 skip = 0 
@@ -16,6 +17,18 @@ def better_than_split(line: str) -> list[str]:
         if line[char].isspace():
             char += 1
             continue
+        if line[char] in ('"', "'"):
+            quote = line[char]
+            token = quote
+            char += 1
+            while char < len(line) and line[char] != quote:
+                token += line[char]
+                char += 1
+            if char < len(line):
+                token += quote
+                char += 1
+            res.append(token)
+            continue
         predicate1 = line[char].isalpha()
         predicate2 = line[char].isdigit()
         token = line[char]
@@ -24,21 +37,40 @@ def better_than_split(line: str) -> list[str]:
                 break
             token += line[char + 1]
             char += 1
-            predicate1 = line[char].isalpha()
-            predicate2 = line[char].isdigit()
+            if line[char] not in (".", "_"):
+                predicate1 = line[char].isalpha()
+                predicate2 = line[char].isdigit()
         res.append(token)
         char += 1
-        
+
     return res
 
 
-def translate_block(lines: list) -> str:
+def _cintra_input(name: str):
+    value = input()
+    if name in stack:
+        try:
+            return type(stack[name])(value)
+        except Exception:
+            return value
+    try:
+        return int(value)
+    except ValueError:
+        pass
+    try:
+        return float(value)
+    except ValueError:
+        pass
+    return value
+
+
+def translate_block(lines: list, in_class: bool = False) -> str:
     result = []
     indent = 0
     i = 0
     while i < len(lines):
         raw = lines[i]
-        line = raw.strip()
+        line = raw.strip().rstrip(";").rstrip()
         if not line or line.startswith("//"):
             i += 1
             continue
@@ -49,8 +81,7 @@ def translate_block(lines: list) -> str:
         kw = tokens[0]
 
         if kw in ("if", "если"):
-            cond = " ".join(tokens[1:]).rstrip(":")
-            cond = cond.replace("&&", "and").replace("||", "or")
+            cond = " ".join(tokens[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
             result.append("    " * indent + f"if {cond}:")
             indent += 1
 
@@ -63,8 +94,7 @@ def translate_block(lines: list) -> str:
             indent -= 1
 
         elif kw in ("while", "пока"):
-            cond = " ".join(tokens[1:]).rstrip(":")
-            cond = cond.replace("&&", "and").replace("||", "or")
+            cond = " ".join(tokens[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
             result.append("    " * indent + f"while {cond}:")
             indent += 1
 
@@ -85,7 +115,7 @@ def translate_block(lines: list) -> str:
             depth = 0
             j = i + 1
             while j < len(lines):
-                t2 = better_than_split(lines[j].strip())
+                t2 = better_than_split(lines[j].strip().rstrip(";").rstrip())
                 if t2:
                     if t2[0] in ("func", "функция"):
                         depth += 1
@@ -96,7 +126,10 @@ def translate_block(lines: list) -> str:
                 body_lines.append(lines[j])
                 j += 1
 
-            all_args = ["self"] + args
+            if in_class and not (args and args[0] == "self"):
+                all_args = ["self"] + args
+            else:
+                all_args = args
             result.append("    " * indent + f'def {name}({", ".join(all_args)}):')
             indent += 1
             inner_code = translate_block(body_lines)
@@ -105,386 +138,152 @@ def translate_block(lines: list) -> str:
                     result.append("    " * indent + bl)
             else:
                 result.append("    " * indent + "pass")
-            
             indent -= 1
             i = j
 
         elif kw in ("funcend", "конецфункции"):
             pass
+        elif kw in ("struct", "class", "класс", "структура"):
+            header = " ".join(tokens[1:]).rstrip(":").strip()
+            parts = header.split()
+            name = parts[0] if parts else ""
+            parent = parts[1] if len(parts) > 1 else ""
+            body_lines = []
+            depth = 0
+            j = i + 1
+            end_kws = ("structend", "classend", "конецструктуры", "конецкласса")
+            while j < len(lines):
+                t2 = better_than_split(lines[j].strip().rstrip(";").rstrip())
+                if t2:
+                    if t2[0] in ("struct", "class", "класс", "структура"):
+                        depth += 1
+                    elif t2[0] in end_kws:
+                        if depth == 0:
+                            break
+                        depth -= 1
+                body_lines.append(lines[j])
+                j += 1
 
+            base = f"({parent})" if parent else ""
+            result.append("    " * indent + f"class {name}{base}:")
+            indent += 1
+            inner_code = translate_block(body_lines, in_class=True)
+            if inner_code.strip():
+                for bl in inner_code.splitlines():
+                    result.append("    " * indent + bl)
+            else:
+                result.append("    " * indent + "pass")
+            indent -= 1
+            i = j
+
+        elif kw in ("structend", "classend", "конецструктуры", "конецкласса"):
+            pass
+
+        elif kw in ("out", "вывести"):
+            rest = tokens[1:]
+            if rest and rest[0] in ("call", "вызвать"):
+                expr = f'{rest[1]}({", ".join(rest[2:])})'
+            else:
+                expr = " ".join(rest)
+            result.append("    " * indent + f"print({expr})")
+
+        elif kw in ("in", "ввести"):
+            name = tokens[1]
+            result.append("    " * indent + f'{name} = _cintra_input("{name}")')
+
+        elif kw in ("out_type", "вывести_тип"):
+            expr = " ".join(tokens[1:])
+            result.append("    " * indent + f"print(type({expr}))")
+
+        elif kw in ("call", "вызвать"):
+            name = tokens[1]
+            args = ", ".join(tokens[2:])
+            result.append("    " * indent + f"{name}({args})")
+
+        elif kw in ("return", "вернуть"):
+            rest = tokens[1:]
+            if rest and rest[0] in ("call", "вызвать"):
+                expr = f'{rest[1]}({", ".join(rest[2:])})'
+            else:
+                expr = " ".join(rest)
+            result.append("    " * indent + f"return {expr}")
+
+        elif kw in ("var", "let", "переменная"):
+            name = tokens[1]
+            # tokens[2] is "="
+            rest = tokens[3:]
+            if rest and rest[0] in ("call", "вызвать"):
+                value = f'{rest[1]}({", ".join(rest[2:])})'
+            else:
+                value = " ".join(rest)
+            result.append("    " * indent + f"{name} = {value}")
+
+        elif kw in ("push", "добавить"):
+            name = tokens[1]
+            rest = tokens[2:]
+            if rest and rest[0] in ("call", "вызвать"):
+                value = f'{rest[1]}({", ".join(rest[2:])})'
+            else:
+                value = " ".join(rest)
+            result.append("    " * indent + f"{name}.append({value})")
+
+        elif kw in ("lambda", "лямбда"):
+            all_string = " ".join(tokens[1:])
+            if ":" not in all_string:
+                result.append("    " * indent + f"# bad lambda: {all_string}")
+            else:
+                head, expr = all_string.split(":", 1)
+                parts = head.split()
+                lname = parts[0] if parts else "_lambda"
+                largs = parts[1:] if len(parts) > 1 else []
+                expr = expr.strip()
+                if not expr.startswith("return"):
+                    expr = "return " + expr
+                result.append("    " * indent + f"def {lname}({', '.join(largs)}): {expr}")
+
+        elif kw in ("include", "подключить"):
+            result.append("    " * indent + f"import {tokens[1]}")
+
+        elif kw in ("cintrafile", "файлцинтра"):
+            path = tokens[1]
+            with open(path) as f:
+                included = translate_block(f.readlines())
+            for il in included.splitlines():
+                result.append("    " * indent + il)
+            result.append("    " * indent + 'print("module on cintra included")')
+        elif kw in ("pythonblock", "блокпитона"):
+            j = i + 1
+            while j < len(lines):
+                t = better_than_split(lines[j].strip())
+                if t and t[0] in ("pythonend", "конецпитона"):
+                    break
+                result.append("    " * indent + lines[j].rstrip())
+                j += 1
+            i = j
+
+        elif kw in ("pythonend", "конецпитона"):
+            pass
         else:
-            translated = parser_of_expressions(line)
-            if translated:
-                result.append("    " * indent + translated)
+            result.append("    " * indent + line)
 
         i += 1
 
     return "\n".join(result)
 
-def parser_of_expressions(line: str) -> str: # parse line in lambda /function
-    global stack
-    line = better_than_split(line)
-    if not line:
-        return ""
-    if line[0] in ("out", "вывести"):
-        return f'print({" ".join(line[1:])})'
-    if line[0] in ("in", "ввести"):
-        return f'{line[1]} = input()'
-    if line[0] in ("out_type", "вывести_тип"):
-        return f'print({type(line[1])})'
-    if line[0] in ("call", "вызвать"):
-        func = line[1]
-        args = ", ".join(line[2:])
-        return f'{func}({args})'
-    if line[0] in ("return", "вернуть"):
-        return f'return {parser_of_expressions(" ".join(line[1:]))}'
-    if line[0] in ("out_type", "вывести_тип"):
-        return f'print({type(stack[line[1]])})'
-    if line[0] in ("var", "let", "переменная"):
-        return f'{line[1]} = {" ".join(line[3:])}'
-    if line[0] in ("if", "если"):
-        return f'if {" ".join(line[1:])}'
-    if line[0] in ("push", "добавить"):
-        return f'{line[1]}.append({eval(line[2], {}, stack)})'
-    else:
-        return " ".join(line)
-
-
-
-
-
-# Goal: make big functions, not lambdas. 
-# kinda like 'func' and 'funcend'
-
-
-class Function:
-    def __init__(self, name, args):
-        if isinstance(args, str):
-            self.args = args.rstrip(":").split()
-        else:
-            self.args = list(args)
-        self.name = name
-        self.body_lines = []
-
-    def add_line(self, raw_line):
-        self.body_lines.append(raw_line)
-
-    def end_of_init(self):
-        body = translate_block(self.body_lines)
-        if body.strip():
-            body = "\n".join("    " + line for line in body.splitlines())
-        else:
-            body = "    pass"
-        code = f'def {self.name}({", ".join(self.args)}):\n{body}'
-        exec(code, stack)
-class struct: # YOU WANT OOP? YEAH?
-    def __init__(self, name, parent_class):
-        self.name = name
-        self.parent_class = parent_class
-        self.body_lines = []
-    def add_line(self, line):
-        self.body_lines.append(line)
-    def end_of_init(self):
-        body = translate_block(self.body_lines)
-        if body.strip():
-            body = "\n".join("    " + line for line in body.splitlines())
-        else:
-            body = "    pass"
-        if self.parent_class != "":
-            code = f'class {self.name}({self.parent_class}):\n{body}'
-        else:
-            code = f'class {self.name}:\n{body}'
-        exec(code, stack)
-
-def understand_line(line: list, count_of_lines: int) -> int:
-    global stack, taken, skip, is_module, is_python
-    if line[0] == "if" or line[0] == "если":
-        cond = " ".join(line[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
-        try:
-            result = eval(cond, {}, stack)
-        except Exception as e:
-            print(f"BAD CONDITION on line {count_of_lines}: {e}")
-            return 1
-        if result:
-            taken = 1
-        else:
-            skip = 1
-        return 0
-    if line[0].rstrip(":") == "else" or line[0].rstrip(":") == "иначе":
-        if taken == 1:
-            skip = 1
-        return 0
-    if line[0] == "endif" or line[0] == "конецесли":
-        taken = 0
-        return 0
-
-    if line[0] == "out" or line[0] == "вывести":
-        print(eval(parser_of_expressions(" ".join(line[1:])), {}, stack))
-        return 0
-    if line[0] in ("in", "ввести"):
-        var = line[1]
-        try:
-            if var in stack:
-                stack[var] = type(stack[var])(input())
-            else:
-                stack[var] = input()
-                
-        except Exception as e:
-            print(f"BAD INPUT on line {count_of_lines}: {e}")
-            return 1
-        return 0
-    if line[0] == "include" or line[0] == "подключить":
-        importlib.import_module(line[1])
-        return 0
-    if line[0] == "out_type" or line[0] == "вывести_тип":
-        print(type(eval(" ".join(line[1:]), {}, stack)))
-        return 0
-    if " ".join(line).startswith("//"):
-        return 0
-    # lambda functions are in beta now
-    if line[0] in ("lambda", "лямбда"):
-        all_string = " ".join(line[1:])
-        first = all_string.split(":")[0].split()
-        expression = all_string.split(":")[1]
-        expression = parser_of_expressions(expression)
-        if len(first) >= 2:
-            exec("def" + " " + first[0] + "("+(" ,".join(first[1:]))+")" + ":" + expression, stack)
-        else:
-            exec("def" + " " + first[0] + "()" + ":" + expression, stack)
-        return 0
-    if line[0] in ("call", "вызвать"):
-        full_line = line[1:]
-        if len(full_line) == 1:
-            stack[line[1]]()
-        else:
-            args = [eval(a, {}, stack) for a in line[2:]]
-            stack[line[1]](*args)
-        return 0
-    if line[0] in ("push", "добавить"):
-        stack[line[1]].append(eval(line[2], {}, stack))
-        return 0
-    if line[0] in ("var", "let", "переменная"):
-        stack[line[1]] = eval(" ".join(line[3:]), {}, stack)
-        return 0
-    try:
-        name, op_tok = line[0], line[1]
-        expr = " ".join(line[2:])
-        if op_tok == "=":
-            stack[name] = eval(expr, {}, stack)
-        elif op_tok == "*=":
-            stack[name] *= eval(expr, {}, stack)
-        elif op_tok == "+=":
-            stack[name] += eval(expr, {}, stack)
-        elif op_tok == "-=":
-            stack[name] -= eval(expr, {}, stack)
-        elif op_tok == "/=":
-            stack[name] /= eval(expr, {}, stack)
-        elif op_tok == "%=":
-            stack[name] %= eval(expr, {}, stack)
-        elif op_tok == "**=":
-            stack[name] **= eval(expr, {}, stack)
-        elif op_tok == "//=":
-            stack[name] //= eval(expr, {}, stack)
-        else:
-            if is_python:
-                exec(" ".join(line), {}, stack)
-            else:
-                print(f"SYNTAX ERROR on line {count_of_lines}")
-    except Exception as e:
-        print(f"BAD KEYWORDS on line {count_of_lines}: {e}")
-        return 1
-
-
-def run_block(body: list, body_nums: int) -> int:
-    global skip, taken
-    i = 0
-    while i < len(body):
-        l = body[i]
-        if skip > 0:
-            if l[0] in ("if", "если"):
-                skip += 1
-            elif l[0] in ("endif", "конецесли"):
-                skip -= 1
-                if skip == 0:
-                    taken = 0
-            elif l[0] in ("while", "пока"):
-                skip += 1
-            elif l[0] in ("whileend", "покаконец"):
-                skip -= 1
-            elif l[0] in ("else", "иначе") and skip == 1:
-                skip = 0
-            i += 1
-            continue
-        if l[0] in ("while", "пока"):
-            cond = " ".join(l[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
-            depth = 0
-            j = i + 1
-            while j < len(body):
-                if body[j][0] in ("while", "пока"):
-                    depth += 1
-                elif body[j][0] in ("whileend", "покаконец"):
-                    if depth == 0:
-                        break
-                    depth -= 1
-                j += 1
-            if j >= len(body):
-                print("MISSING whileend")
-                return 1
-            sub_body = body[i+1:j]
-            sub_nums = body_nums[i+1:j]
-            while eval(cond, {}, stack):
-                if run_block(sub_body, sub_nums):
-                    return 1
-            i = j + 1
-            continue
-        if l[0] in ("whileend", "покаконец"):
-            print("UNEXPECTED whileend")
-            return 1
-        if understand_line(l, body_nums[i]):
-            return 1
-        i += 1
-    return 0
-
 
 def run_code(file_name: str = "to_compile") -> int:
-    global stack, taken, skip, is_module, is_python
-    with open(file_name, 'r') as file:
-        count_of_lines = 0
-
-        while True:
-            raw = file.readline()
-            if raw == "" and is_module == False:
-                print("Program have been done with exit code 0.")
-                return 0
-            elif raw == "" and is_module == True:
-                print("module on cintra included")
-                is_module = False
-                return 0
-            count_of_lines += 1
-            line = better_than_split(raw)
-            if not line:
-                continue
-
-            if skip > 0:
-                if line[0] in ("if", "если"):
-                    skip += 1
-                elif line[0] in ("endif", "конецесли"):
-                    skip -= 1
-                    if skip == 0:
-                        taken = 0
-                elif line[0] in ("while", "пока"):
-                    skip += 1
-                elif line[0] in ("whileend", "покаконец"):
-                    skip -= 1
-                elif line[0].rstrip(":") in ("else", "иначе") and skip == 1:
-                    skip = 0
-                continue
-            else:
-                if line[0] not in ("else", "if", "while", "func"):
-                    line = better_than_split(" ".join(line).rstrip(";"))
-            if line[0] in ("lambda", "лямбда"):
-                understand_line(line, count_of_lines)
-                continue
-            if line[0] in ("call", "вызвать"):
-                understand_line(line, count_of_lines)
-                continue
-            if line[0] in ("cintrafile", "файлцинтра"):
-                is_module = True
-                run_code(f'{line[1]}')
-                continue
-            if line[0] in ('func', 'функция'):
-                header = " ".join(line[1:]).rstrip(":").strip()
-                if "(" in header:
-                    name = header.split("(")[0].strip()
-                    inner = header[header.index("(")+1:header.rindex(")")]
-                    args = [a.strip() for a in inner.split(",") if a.strip()]
-                else:
-                    parts = header.split()
-                    name = parts[0] if parts else ""
-                    args = parts[1:]
-                function = Function(name, args)
-                while True:
-                    raw = file.readline()
-                    if raw == "":
-                        print("MISSING funcend")
-                        return 1
-                    count_of_lines += 1
-                    l = better_than_split(raw)
-                    if not l:
-                        continue
-                    if l[0] in ("funcend", "конецфункции"):
-                        break
-                    function.add_line(raw)
-                function.end_of_init()
-                continue
-
-            if line[0] in ('struct', 'class', 'класс', 'структура'):
-                header = " ".join(line[1:]).rstrip(":").strip()
-                parts = header.split()
-                name = parts[0] if parts else ""
-                if len(parts) > 1:
-                    parent_class = parts[1]
-                
-                    new_struct = struct(name, parent_class)
-                else:
-                    new_struct = struct(name, "")
-                while True:
-                    raw = file.readline()
-                    if raw == "":
-                        print("MISSING structend")
-                        return 1
-                    count_of_lines += 1
-                    l = better_than_split(raw)
-                    if not l:
-                        continue
-                    if l[0] in ("structend", "конецструктуры", "конецкласса", "classend"):
-                        break
-                    new_struct.add_line(raw)
-                new_struct.end_of_init()
-                continue
-
-
-            if line[0] in ("push", "добавить"):
-                stack[line[1]].append(eval(line[2], {}, stack))
-                continue
-            if line[0] in ("pythonblock", "блокпитона"):
-                is_python = True
-                print('Python block running...')
-                continue
-            if line[0] in ("pythonend", "конецпитона"):
-                is_python = False
-                print("Python block ended")
-                continue
-            if line[0] in ("while", "пока"):
-                cond = " ".join(line[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
-                body = []
-                body_nums = []
-                depth = 0
-                while True:
-                    raw2 = file.readline()
-                    if raw2 == "":
-                        print("MISSING whileend")
-                        return 1
-                    count_of_lines += 1
-                    l2 = better_than_split(raw2)
-                    if not l2:
-                        continue
-                    if l2[0] in ("while", "пока"):
-                        depth += 1
-                    elif l2[0] in ("whileend", "покаконец"):
-                        if depth == 0:
-                            break
-                        depth -= 1
-                    body.append(l2)
-                    body_nums.append(count_of_lines)
-
-                while eval(cond, {}, stack):
-                    if run_block(body, body_nums):
-                        return 1
-                continue
-
-            if understand_line(line, count_of_lines):
-                return 1
+    global stack
+    stack["_cintra_input"] = _cintra_input
+    with open(file_name) as f:
+        lines = f.readlines()
+    code = translate_block(lines)
+    try:
+        exec(code, stack)
+    except Exception as e:
+        print(f"ERROR: {e}")
+        return 1
+    print("Program have been done with exit code 0.")
+    return 0
 
 file_name = input("Enter file name: ")
 run_code(file_name)
