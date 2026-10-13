@@ -1,0 +1,42 @@
+include random
+include time
+include re
+
+func getfibelement(element):
+  if (element == 1 || element == 0):
+    return 1
+  endif
+  return getfibelement(element - 1) + getfibelement(element - 2)
+funcend
+
+// a few weeks ago, i couldn't believe that i will write standart libraly on my own language for itself... (13.10.26)
+
+func split_line(line):
+    return line.split()
+funcend
+
+func randint(a, b):
+    return random.randint(a, b)
+funcend
+
+func god_choice(array):
+    return random.choice(array)
+funcend
+
+func unix_time():
+    return time.time()
+funcend
+
+func doc(object=""):
+    if object == "":
+        print("Cintra language was created in Sep. 2026 and supports:\n1.variables\n2.I/O\n3.if/else\n4.whiles\n5.functions and lambdas\n6.structs and classes")
+    if object == "stdlib":
+        print("standart libraly in Cintra was first created 13rd Oct. 2026")
+    if object == "goals":
+        print("goals is to make team around the project; and maybe references?")
+    endif
+    return ""
+funcend
+func sum(a, b):
+    return (a + b) * (b - a + 1) // 2
+funcend
