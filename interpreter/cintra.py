@@ -244,7 +244,7 @@ def translate_block(lines: list, in_class: bool = False) -> str:
         elif kw in ("include", "подключить"):
             result.append("    " * indent + f"import {tokens[1]}")
 
-        elif kw in ("cintrafile", "файлцинтра"):
+        elif kw in ("lib", "библиотека"):
             path = tokens[1]
             with open(path) as f:
                 included = translate_block(f.readlines())
