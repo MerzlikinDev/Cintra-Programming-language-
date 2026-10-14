@@ -32,6 +32,8 @@ def better_than_split(line: str) -> list[str]:
         predicate1 = line[char].isalpha()
         predicate2 = line[char].isdigit()
         token = line[char]
+        if char < len(line) - 1 and line[char] == "/" and line[char + 1] == "/":
+            break
         while char + 1 < len(line) and ((line[char + 1].isalpha() == predicate1 and line[char+1].isdigit() == predicate2 or line[char+1] in ("_", ".")) or line[char] == "_"):
             if line[char+1].isspace():
                 break
@@ -75,6 +77,7 @@ def translate_block(lines: list, in_class: bool = False) -> str:
             i += 1
             continue
         tokens = better_than_split(line)
+        tokens = [i for i in tokens if i != ";"]
         if not tokens:
             i += 1
             continue
@@ -264,19 +267,22 @@ def translate_block(lines: list, in_class: bool = False) -> str:
         elif kw in ("pythonend", "конецпитона"):
             pass
         else:
-            result.append("    " * indent + line)
+            result.append("    " * indent + " ".join(tokens))
 
         i += 1
 
     return "\n".join(result)
 
 
-def run_code(file_name: str = "to_compile") -> int:
+def run_code(file_name: str = "to_compile", to_file=True) -> int:
     global stack
     stack["_cintra_input"] = _cintra_input
     with open(file_name) as f:
         lines = f.readlines()
     code = translate_block(lines)
+    if to_file: # thank u/sausix from reddit.
+        with open(file_name + ".py", "w") as out:
+            out.write(code)
     try:
         exec(code, stack)
     except Exception as e:
