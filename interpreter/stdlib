@@ -8,7 +8,6 @@ func getfibelement(element):
   endif
   return getfibelement(element - 1) + getfibelement(element - 2)
 funcend
-
 // a few weeks ago, i couldn't believe that i will write standart libraly on my own language for itself... (13.10.26)
 
 func split_line(line):
@@ -36,7 +35,7 @@ func doc(object=""):
         print("goals is to make team around the project; and maybe references?")
     endif
     return ""
-funcend
+blockend
 func sum(a, b):
-    return (a + b) * (b - a + 1) // 2
+    return (a + b) * (b - a + 1) / 2
 funcend
