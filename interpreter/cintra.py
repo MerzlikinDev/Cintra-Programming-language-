@@ -34,7 +34,7 @@ def better_than_split(line: str) -> list[str]:
         token = line[char]
         if char < len(line) - 1 and line[char] == "/" and line[char + 1] == "/":
             break
-        while char + 1 < len(line) and ((line[char + 1].isalpha() == predicate1 and line[char+1].isdigit() == predicate2 or line[char+1] in ("_", ".")) or line[char] == "_"):
+        while char + 1 < len(line) and ((line[char + 1].isalpha() == predicate1 and line[char+1].isdigit() == predicate2 or line[char+1] in ("_", ".")) or line[char] in( "_", "\\")):
             if line[char+1].isspace():
                 break
             token += line[char + 1]
@@ -229,7 +229,10 @@ def translate_block(lines: list, in_class: bool = False) -> str:
             else:
                 value = " ".join(rest)
             result.append("    " * indent + f"{name}.append({value})")
-
+        elif kw in ("delete", "удалить"):
+            result.append("   " * indent + f"del {tokens[1]}[{tokens[2]}]")
+        elif kw in ("clear", "очистить"):
+            result.append("    " * indent + f'{tokens[1]} = []')
         elif kw in ("lambda", "лямбда"):
             all_string = " ".join(tokens[1:])
             if ":" not in all_string:
