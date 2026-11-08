@@ -231,6 +231,15 @@ def translate_block(lines: list, in_class: bool = False) -> str:
             result.append("    " * indent + f"del {tokens[1]}[{tokens[2]}]")
         elif kw in ("clear", "очистить"):
             result.append("    " * indent + f'{tokens[1]} = []')
+        elif kw in ("continue", "продолжить"):
+            result.append("    " * indent + f'continue')
+        elif kw in ("break", "выйти"):
+            result.append("    " * indent + f'break')
+        elif kw in ("for", "для"):
+            result.append("    " * indent + f'for {tokens[1]} in {tokens[3]}:')
+            indent += 1
+        elif kw in ("forend", "конецдля"):
+            indent-=1
         elif kw in ("lambda", "лямбда"):
             all_string = " ".join(tokens[1:])
             if ":" not in all_string:
@@ -294,3 +303,4 @@ def run_code(file_name: str = "to_compile", to_file=True) -> int:
 
 file_name = input("Enter file name: ")
 run_code(file_name)
+
