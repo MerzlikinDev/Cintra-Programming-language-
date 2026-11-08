@@ -46,8 +46,6 @@ def better_than_split(line: str) -> list[str]:
         char += 1
 
     return res
-
-
 def _cintra_input(name: str):
     value = input()
     if name in stack:
@@ -84,7 +82,7 @@ def translate_block(lines: list, in_class: bool = False) -> str:
         kw = tokens[0]
 
         if kw in ("if", "если"):
-            cond = " ".join(tokens[1:]).rstrip(":").replace("&&", "and").replace("||", "or")
+            cond = " ".join(tokens[1:]).rstrip(":").rstrip("then").replace("&&", "and").replace("||", "or")
             result.append("    " * indent + f"if {cond}:")
             indent += 1
 
@@ -230,7 +228,7 @@ def translate_block(lines: list, in_class: bool = False) -> str:
                 value = " ".join(rest)
             result.append("    " * indent + f"{name}.append({value})")
         elif kw in ("delete", "удалить"):
-            result.append("   " * indent + f"del {tokens[1]}[{tokens[2]}]")
+            result.append("    " * indent + f"del {tokens[1]}[{tokens[2]}]")
         elif kw in ("clear", "очистить"):
             result.append("    " * indent + f'{tokens[1]} = []')
         elif kw in ("lambda", "лямбда"):
